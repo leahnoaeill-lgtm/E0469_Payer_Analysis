@@ -818,7 +818,6 @@
                             <th data-field="name" class="sortable">Payer Name</th>
                             <th data-field="payer_type" class="sortable">Type</th>
                             <th data-field="coverage_status" class="sortable">Coverage Status</th>
-                            <th data-field="prior_auth_required" class="sortable">Prior Auth</th>
                             <th data-field="investigational" class="sortable">Investigational</th>
                             <th data-field="policy_date" class="sortable">Policy Date</th>
                             <th>Notes</th>
@@ -826,7 +825,7 @@
                         </tr>
                     </thead>
                     <tbody id="payersTable">
-                        <tr><td colspan="8" class="loading">Loading...</td></tr>
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
                     </tbody>
                 </table>
                 <div class="pagination" id="pagination"></div>
@@ -1029,7 +1028,7 @@
             const tbody = document.getElementById('payersTable');
 
             if (payers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="loading">No payers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">No payers found</td></tr>';
                 return;
             }
 
@@ -1038,7 +1037,6 @@
                     <td><strong>${p.source_url ? `<a href="${escapeHtml(p.source_url)}" target="_blank" class="source-link">${escapeHtml(p.name)}</a>` : escapeHtml(p.name)}</strong></td>
                     <td>${escapeHtml(p.payer_type || '')}</td>
                     <td><span class="coverage-badge" style="background: ${p.color_code}">${escapeHtml(p.coverage_category || '')}</span></td>
-                    <td>${escapeHtml(p.prior_auth_required || '')}</td>
                     <td>${escapeHtml(p.investigational || '')}</td>
                     <td>${escapeHtml(p.policy_date || '')}</td>
                     <td class="notes-cell" title="${escapeHtml(p.notes || '')}">${escapeHtml(p.notes || '')}</td>
