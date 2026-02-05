@@ -331,18 +331,6 @@ payer_data = [
         "source": "https://www.univerahealthcare.com/documents/d/global/uni-prv-airway-clearance-devices-1"
     },
     {
-        "name": "BiWaze Clear Reimbursement Guide (ABM)",
-        "type": "Manufacturer Reference",
-        "coverage": "Reference Only",
-        "prior_auth": "Varies by Payer",
-        "investigational": "Many Payers - Yes",
-        "not_med_necessary": "Many Payers - Yes",
-        "date": "10/01/2024",
-        "policy_num": "E0469 + A7021",
-        "notes": "E0469 effective 10/1/2024 for OLE therapy. A7021 for monthly disposables. Industry reference notes many payers consider OLE devices investigational.",
-        "source": "https://resources.abmrc.com/biwaze-clear-reimbursement-hcpcs-codes-e0469-a7021-for-ole-therapy"
-    },
-    {
         "name": "Noridian Medicare (JD DME)",
         "type": "Medicare MAC",
         "coverage": "Case-by-Case (No LCD)",
