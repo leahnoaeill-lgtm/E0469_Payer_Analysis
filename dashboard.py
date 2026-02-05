@@ -103,11 +103,11 @@ def map_view():
 
 @app.route('/api/state-coverage')
 def get_state_coverage():
-    """Get coverage status by state for heatmap."""
+    """Get coverage status by state for heatmap with breakdown by status."""
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Get best coverage status per state (prioritize: Covered > Prior-Auth > Not Covered)
+    # Get all payers grouped by state and coverage status
     cur.execute("""
         SELECT
             p.state,
@@ -124,7 +124,7 @@ def get_state_coverage():
     rows = cur.fetchall()
     conn.close()
 
-    # Aggregate by state - use best coverage status
+    # Aggregate by state with breakdown by status
     state_data = {}
     for row in rows:
         state = row['state']
@@ -135,27 +135,40 @@ def get_state_coverage():
         if state not in state_data:
             state_data[state] = {
                 'state': state,
-                'coverage_status': status,
-                'payer_count': count,
-                'payers': payers,
-                'priority': 3 if status == 'Not Covered' else (2 if status == 'Prior-Auth Required' else 1)
+                'total_payers': 0,
+                'statuses': {},
+                'payers_by_status': {}
             }
-        else:
-            # Keep the better coverage status
-            current_priority = state_data[state]['priority']
-            new_priority = 3 if status == 'Not Covered' else (2 if status == 'Prior-Auth Required' else 1)
-            if new_priority < current_priority:
-                state_data[state]['coverage_status'] = status
-                state_data[state]['priority'] = new_priority
-            state_data[state]['payer_count'] += count
-            state_data[state]['payers'] += ', ' + payers
 
-    # Remove priority field and return
+        state_data[state]['total_payers'] += count
+        state_data[state]['statuses'][status] = count
+        state_data[state]['payers_by_status'][status] = payers
+
+    # Determine display color based on majority or mixed status
     result = []
     for state, data in state_data.items():
-        del data['priority']
-        data['color'] = COVERAGE_CATEGORIES.get(data['coverage_status'], '#E2E8F0')
-        result.append(data)
+        statuses = data['statuses']
+
+        # Determine primary status for color (most common, or mixed if tied)
+        if len(statuses) == 1:
+            primary_status = list(statuses.keys())[0]
+        else:
+            # If mixed, use priority: Not Covered > Prior-Auth > Covered (show worst case)
+            if 'Not Covered' in statuses:
+                primary_status = 'Not Covered'
+            elif 'Prior-Auth Required' in statuses:
+                primary_status = 'Prior-Auth Required'
+            else:
+                primary_status = 'Covered'
+
+        result.append({
+            'state': state,
+            'coverage_status': primary_status,
+            'color': COVERAGE_CATEGORIES.get(primary_status, '#E2E8F0'),
+            'total_payers': data['total_payers'],
+            'statuses': statuses,
+            'payers_by_status': data['payers_by_status']
+        })
 
     return jsonify(result)
 
