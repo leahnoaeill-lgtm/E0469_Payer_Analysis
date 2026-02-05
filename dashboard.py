@@ -95,6 +95,71 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+@app.route('/map')
+def map_view():
+    """Render heatmap view."""
+    return render_template('map.html')
+
+
+@app.route('/api/state-coverage')
+def get_state_coverage():
+    """Get coverage status by state for heatmap."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Get best coverage status per state (prioritize: Covered > Prior-Auth > Not Covered)
+    cur.execute("""
+        SELECT
+            p.state,
+            pp.coverage_status,
+            COUNT(*) as payer_count,
+            STRING_AGG(p.name, ', ' ORDER BY p.name) as payers
+        FROM payers p
+        JOIN payer_policies pp ON p.id = pp.payer_id
+        WHERE p.state IS NOT NULL
+        GROUP BY p.state, pp.coverage_status
+        ORDER BY p.state
+    """)
+
+    rows = cur.fetchall()
+    conn.close()
+
+    # Aggregate by state - use best coverage status
+    state_data = {}
+    for row in rows:
+        state = row['state']
+        status = row['coverage_status']
+        count = row['payer_count']
+        payers = row['payers']
+
+        if state not in state_data:
+            state_data[state] = {
+                'state': state,
+                'coverage_status': status,
+                'payer_count': count,
+                'payers': payers,
+                'priority': 3 if status == 'Not Covered' else (2 if status == 'Prior-Auth Required' else 1)
+            }
+        else:
+            # Keep the better coverage status
+            current_priority = state_data[state]['priority']
+            new_priority = 3 if status == 'Not Covered' else (2 if status == 'Prior-Auth Required' else 1)
+            if new_priority < current_priority:
+                state_data[state]['coverage_status'] = status
+                state_data[state]['priority'] = new_priority
+            state_data[state]['payer_count'] += count
+            state_data[state]['payers'] += ', ' + payers
+
+    # Remove priority field and return
+    result = []
+    for state, data in state_data.items():
+        del data['priority']
+        data['color'] = COVERAGE_CATEGORIES.get(data['coverage_status'], '#E2E8F0')
+        result.append(data)
+
+    return jsonify(result)
+
+
 @app.route('/api/payers')
 def get_payers():
     """Get payers with filtering, sorting, and pagination."""
