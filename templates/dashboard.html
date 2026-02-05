@@ -1035,7 +1035,7 @@
 
             tbody.innerHTML = payers.map(p => `
                 <tr>
-                    <td><strong>${escapeHtml(p.name)}</strong></td>
+                    <td><strong>${p.source_url ? `<a href="${escapeHtml(p.source_url)}" target="_blank" class="source-link">${escapeHtml(p.name)}</a>` : escapeHtml(p.name)}</strong></td>
                     <td>${escapeHtml(p.payer_type || '')}</td>
                     <td><span class="coverage-badge" style="background: ${p.color_code}">${escapeHtml(p.coverage_category || '')}</span></td>
                     <td>${escapeHtml(p.prior_auth_required || '')}</td>
