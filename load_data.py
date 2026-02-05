@@ -109,7 +109,7 @@ payer_data = [
         "date": "Current",
         "policy_num": "DHS16_152808",
         "notes": "E0469 EXPLICITLY NOT COVERED for any indication. Lung expansion airway clearance devices not considered standard of care in community setting. Substantive research lacking.",
-        "source": "https://www.dhs.state.mn.us/main/idcplg?IdcService=GET_DYNAMIC_CONVERSION&dDocName=DHS16_152808"
+        "source": "https://www.dhs.state.mn.us/main/idcplg?IdcService=GET_DYNAMIC_CONVERSION&dDocName=DHS16_152808&RevisionSelectionMethod=LatestReleased"
     },
     {
         "name": "Blue Cross Blue Shield Florida",
@@ -678,13 +678,13 @@ payer_data = [
     {
         "name": "Capital Blue Cross (Pennsylvania)",
         "type": "BCBS",
-        "coverage": "NOT COVERED - Experimental/Investigational",
-        "prior_auth": "N/A",
+        "coverage": "Prior Auth Required",
+        "prior_auth": "Yes",
         "investigational": "Yes",
         "not_med_necessary": "Yes",
         "date": "02/01/2026",
         "policy_num": "MP 4.002",
-        "notes": "E0469 EXPLICITLY listed in Experimental and Investigational Procedures policy (MP 4.002) effective 2/1/2026. Service considered experimental/investigational when: not FDA approved, subject to investigational application, experts indicate further research needed, or not medically necessary except with investigational treatment.",
+        "notes": "E0469 listed in Experimental and Investigational Procedures policy (MP 4.002). Considered experimental/investigational - requires prior authorization review.",
         "source": "https://www.capbluecross.com/wps/wcm/connect/prod_nws.capblue.com29556/12a40734-7069-4e43-8944-30b8c7dde992/medical-policy-experimental-and-investigational-procedures.pdf?MOD=AJPERES"
     },
     {
@@ -702,13 +702,13 @@ payer_data = [
     {
         "name": "Blue Cross Blue Shield Illinois",
         "type": "BCBS",
-        "coverage": "NOT COVERED - EIU Non-Reimbursable",
+        "coverage": "Prior Auth Required",
         "prior_auth": "Recommended Clinical Review",
         "investigational": "Yes",
         "not_med_necessary": "Yes",
         "date": "Current",
         "policy_num": "EIU Medical Policy",
-        "notes": "E0469 EXPLICITLY listed under Non-Reimbursable/Experimental, Investigational, Unproven (EIU) services. Not typically covered as standard approved medical device. Subject to strict review. May require Recommended Clinical Review (formerly predetermination) if submitted.",
+        "notes": "E0469 listed under EIU (Experimental, Investigational, Unproven) services but subject to Recommended Clinical Review. Prior authorization pathway available.",
         "source": "https://www.bcbsil.com/provider/claims/claims-eligibility/fee-schedule"
     },
     {
