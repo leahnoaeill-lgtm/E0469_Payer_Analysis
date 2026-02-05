@@ -27,6 +27,15 @@ def normalize_coverage_status(status):
         return "Covered"
     return "Prior-Auth Required"
 
+
+def normalize_investigational(value):
+    """Convert investigational to Yes/No boolean."""
+    if not value:
+        return "No"
+    if value.lower().startswith('yes'):
+        return "Yes"
+    return "No"
+
 # Payer data from E0469_Explicit_Payer_Policies.py
 payer_data = [
     # CMS/Medicare - E0469 added to fee schedule 10/1/2024
@@ -913,7 +922,7 @@ def load_payers(conn):
         """, (payer["name"], payer["type"]))
         payer_id = cur.fetchone()[0]
 
-        # Insert policy with normalized coverage status
+        # Insert policy with normalized values
         cur.execute("""
             INSERT INTO payer_policies (
                 payer_id, coverage_status, prior_auth_required, investigational,
@@ -924,7 +933,7 @@ def load_payers(conn):
             payer_id,
             normalize_coverage_status(payer["coverage"]),
             payer["prior_auth"],
-            payer["investigational"],
+            normalize_investigational(payer["investigational"]),
             payer["not_med_necessary"],
             payer["date"],
             payer["policy_num"],
