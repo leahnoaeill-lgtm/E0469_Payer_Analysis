@@ -129,13 +129,9 @@ def get_payers():
         params.append(payer_type)
 
     if coverage_status:
-        # Filter by simplified category
-        if coverage_status == "Covered":
-            where_clauses.append("pp.coverage_status LIKE 'Covered%'")
-        elif coverage_status == "Not Covered":
-            where_clauses.append("(pp.coverage_status LIKE 'NOT COVERED%' OR pp.coverage_status LIKE '%Non-Reimbursable%')")
-        elif coverage_status == "Prior-Auth Required":
-            where_clauses.append("(pp.coverage_status NOT LIKE 'Covered%' AND pp.coverage_status NOT LIKE 'NOT COVERED%' AND pp.coverage_status NOT LIKE '%Non-Reimbursable%')")
+        # Filter by coverage status (already normalized to 3 categories in DB)
+        where_clauses.append("pp.coverage_status = %s")
+        params.append(coverage_status)
 
     if investigational:
         if investigational == 'Yes':
@@ -185,11 +181,10 @@ def get_payers():
 
     payers = [dict(row) for row in cur.fetchall()]
 
-    # Add color codes and normalized category
+    # Add color codes (coverage_status is already normalized in DB)
     for payer in payers:
-        normalized = normalize_coverage_status(payer['coverage_status'])
-        payer['coverage_category'] = normalized
-        payer['color_code'] = COVERAGE_CATEGORIES.get(normalized, '#E2E8F0')
+        payer['coverage_category'] = payer['coverage_status']
+        payer['color_code'] = COVERAGE_CATEGORIES.get(payer['coverage_status'], '#E2E8F0')
 
     conn.close()
 
@@ -231,9 +226,8 @@ def get_payer(payer_id):
 
     if payer:
         payer = dict(payer)
-        normalized = normalize_coverage_status(payer['coverage_status'])
-        payer['coverage_category'] = normalized
-        payer['color_code'] = COVERAGE_CATEGORIES.get(normalized, '#E2E8F0')
+        payer['coverage_category'] = payer['coverage_status']
+        payer['color_code'] = COVERAGE_CATEGORIES.get(payer['coverage_status'], '#E2E8F0')
         return jsonify(payer)
     else:
         return jsonify({'error': 'Payer not found'}), 404
@@ -354,21 +348,13 @@ def get_aggregates():
     """)
     investigational_counts = [dict(row) for row in cur.fetchall()]
 
-    # Coverage summary (3 simplified categories)
+    # Coverage summary (coverage_status is already normalized to 3 categories)
     cur.execute("""
-        SELECT category, SUM(cnt) as count FROM (
-            SELECT
-                CASE
-                    WHEN coverage_status LIKE 'NOT COVERED%' OR coverage_status LIKE '%Non-Reimbursable%' THEN 'Not Covered'
-                    WHEN coverage_status LIKE 'Covered%' THEN 'Covered'
-                    ELSE 'Prior-Auth Required'
-                END as category,
-                1 as cnt
-            FROM payer_policies
-        ) subq
-        GROUP BY category
+        SELECT coverage_status as category, COUNT(*) as count
+        FROM payer_policies
+        GROUP BY coverage_status
         ORDER BY
-            CASE category
+            CASE coverage_status
                 WHEN 'Covered' THEN 1
                 WHEN 'Prior-Auth Required' THEN 2
                 WHEN 'Not Covered' THEN 3
@@ -456,13 +442,8 @@ def export_excel():
         params.append(payer_type)
 
     if coverage_status:
-        # Filter by simplified category
-        if coverage_status == "Covered":
-            where_clauses.append("pp.coverage_status LIKE 'Covered%'")
-        elif coverage_status == "Not Covered":
-            where_clauses.append("(pp.coverage_status LIKE 'NOT COVERED%' OR pp.coverage_status LIKE '%Non-Reimbursable%')")
-        elif coverage_status == "Prior-Auth Required":
-            where_clauses.append("(pp.coverage_status NOT LIKE 'Covered%' AND pp.coverage_status NOT LIKE 'NOT COVERED%' AND pp.coverage_status NOT LIKE '%Non-Reimbursable%')")
+        where_clauses.append("pp.coverage_status = %s")
+        params.append(coverage_status)
 
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 

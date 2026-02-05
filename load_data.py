@@ -15,6 +15,18 @@ DB_CONFIG = {
     "port": int(os.environ.get("DB_PORT", 5432))
 }
 
+
+def normalize_coverage_status(status):
+    """Convert detailed coverage status to one of 3 simplified categories."""
+    if not status:
+        return "Prior-Auth Required"
+    status_lower = status.lower()
+    if 'not covered' in status_lower or 'non-reimbursable' in status_lower:
+        return "Not Covered"
+    if status_lower.startswith('covered'):
+        return "Covered"
+    return "Prior-Auth Required"
+
 # Payer data from E0469_Explicit_Payer_Policies.py
 payer_data = [
     # CMS/Medicare - E0469 added to fee schedule 10/1/2024
@@ -913,7 +925,7 @@ def load_payers(conn):
         """, (payer["name"], payer["type"]))
         payer_id = cur.fetchone()[0]
 
-        # Insert policy
+        # Insert policy with normalized coverage status
         cur.execute("""
             INSERT INTO payer_policies (
                 payer_id, coverage_status, prior_auth_required, investigational,
@@ -922,7 +934,7 @@ def load_payers(conn):
             ON CONFLICT DO NOTHING
         """, (
             payer_id,
-            payer["coverage"],
+            normalize_coverage_status(payer["coverage"]),
             payer["prior_auth"],
             payer["investigational"],
             payer["not_med_necessary"],
