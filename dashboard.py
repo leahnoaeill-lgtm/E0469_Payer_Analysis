@@ -129,8 +129,13 @@ def get_payers():
         params.append(payer_type)
 
     if coverage_status:
-        where_clauses.append("pp.coverage_status = %s")
-        params.append(coverage_status)
+        # Filter by simplified category
+        if coverage_status == "Covered":
+            where_clauses.append("pp.coverage_status LIKE 'Covered%'")
+        elif coverage_status == "Not Covered":
+            where_clauses.append("(pp.coverage_status LIKE 'NOT COVERED%' OR pp.coverage_status LIKE '%Non-Reimbursable%')")
+        elif coverage_status == "Prior-Auth Required":
+            where_clauses.append("(pp.coverage_status NOT LIKE 'Covered%' AND pp.coverage_status NOT LIKE 'NOT COVERED%' AND pp.coverage_status NOT LIKE '%Non-Reimbursable%')")
 
     if investigational:
         if investigational == 'Yes':
@@ -451,8 +456,13 @@ def export_excel():
         params.append(payer_type)
 
     if coverage_status:
-        where_clauses.append("pp.coverage_status = %s")
-        params.append(coverage_status)
+        # Filter by simplified category
+        if coverage_status == "Covered":
+            where_clauses.append("pp.coverage_status LIKE 'Covered%'")
+        elif coverage_status == "Not Covered":
+            where_clauses.append("(pp.coverage_status LIKE 'NOT COVERED%' OR pp.coverage_status LIKE '%Non-Reimbursable%')")
+        elif coverage_status == "Prior-Auth Required":
+            where_clauses.append("(pp.coverage_status NOT LIKE 'Covered%' AND pp.coverage_status NOT LIKE 'NOT COVERED%' AND pp.coverage_status NOT LIKE '%Non-Reimbursable%')")
 
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
