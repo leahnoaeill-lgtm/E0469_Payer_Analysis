@@ -705,12 +705,9 @@
                     <label>Coverage Status</label>
                     <select class="search-input" id="newCoverageStatus">
                         <option value="">Select status...</option>
-                        <option value="Covered with Criteria">Covered with Criteria</option>
-                        <option value="Covered with Prior Auth">Covered with Prior Auth</option>
-                        <option value="NOT COVERED">NOT COVERED</option>
-                        <option value="Investigational">Investigational</option>
-                        <option value="Prior Auth Required">Prior Auth Required</option>
-                        <option value="Case-by-Case (No LCD)">Case-by-Case (No LCD)</option>
+                        <option value="Covered">Covered</option>
+                        <option value="Not Covered">Not Covered</option>
+                        <option value="Prior-Auth Required">Prior-Auth Required</option>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
@@ -749,17 +746,13 @@
                     <h3>Covered</h3>
                     <div class="value" id="statCovered">--</div>
                 </div>
+                <div class="stat-card case-by-case">
+                    <h3>Prior-Auth Required</h3>
+                    <div class="value" id="statPriorAuth">--</div>
+                </div>
                 <div class="stat-card not-covered">
                     <h3>Not Covered</h3>
                     <div class="value" id="statNotCovered">--</div>
-                </div>
-                <div class="stat-card investigational">
-                    <h3>Investigational</h3>
-                    <div class="value" id="statInvestigational">--</div>
-                </div>
-                <div class="stat-card case-by-case">
-                    <h3>Case-by-Case</h3>
-                    <div class="value" id="statCaseByCase">--</div>
                 </div>
             </div>
 
@@ -949,19 +942,17 @@
             document.getElementById('statTotal').textContent = data.total_payers;
             document.getElementById('statSearched').textContent = data.total_searched;
 
-            // Calculate summary stats
-            let covered = 0, notCovered = 0, investigational = 0, caseByCase = 0;
+            // Calculate summary stats for 3 categories
+            let covered = 0, notCovered = 0, priorAuth = 0;
             data.summary_counts.forEach(item => {
                 if (item.category === 'Covered') covered = item.count;
                 else if (item.category === 'Not Covered') notCovered = item.count;
-                else if (item.category === 'Investigational') investigational = item.count;
-                else if (item.category === 'Case-by-Case/Prior Auth') caseByCase = item.count;
+                else if (item.category === 'Prior-Auth Required') priorAuth = item.count;
             });
 
             document.getElementById('statCovered').textContent = covered;
             document.getElementById('statNotCovered').textContent = notCovered;
-            document.getElementById('statInvestigational').textContent = investigational;
-            document.getElementById('statCaseByCase').textContent = caseByCase;
+            document.getElementById('statPriorAuth').textContent = priorAuth;
 
             // Render charts
             renderCoverageChart(data.summary_counts);
@@ -973,13 +964,11 @@
             const container = document.getElementById('coverageChart');
             container.innerHTML = '';
 
+            // Simplified 3-category color map
             const colorMap = {
                 'Covered': 'covered',
                 'Not Covered': 'not-covered',
-                'Investigational': 'investigational',
-                'Case-by-Case/Prior Auth': 'case-by-case',
-                'Partial': 'partial',
-                'Other': 'other'
+                'Prior-Auth Required': 'case-by-case'
             };
 
             data.forEach(item => {

@@ -32,16 +32,43 @@ def get_db_connection():
     return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
 
 
-# Coverage status color mapping
+# Simplified coverage status categories (3 options)
+COVERAGE_CATEGORIES = {
+    "Covered": "#C6EFCE",          # Green
+    "Not Covered": "#FFC7CE",       # Red
+    "Prior-Auth Required": "#BDD7EE"  # Blue
+}
+
+# Map detailed statuses to simplified categories
+def normalize_coverage_status(status):
+    """Convert detailed coverage status to one of 3 simplified categories."""
+    if not status:
+        return "Prior-Auth Required"
+
+    status_lower = status.lower()
+
+    # Not Covered
+    if 'not covered' in status_lower or 'non-reimbursable' in status_lower:
+        return "Not Covered"
+
+    # Covered (explicit coverage)
+    if status_lower.startswith('covered'):
+        return "Covered"
+
+    # Everything else maps to Prior-Auth Required:
+    # - Investigational, Partial, Case-by-Case, Prior Auth, Varies, Reference
+    return "Prior-Auth Required"
+
+# Legacy color mapping (for raw status display)
 COVERAGE_COLORS = {
     "NOT COVERED": "#FFC7CE",
     "NOT COVERED - Experimental/Investigational": "#FFC7CE",
     "NOT COVERED - EIU Non-Reimbursable": "#FFC7CE",
-    "Investigational": "#FFEB9C",
-    "Investigational - Experimental": "#FFEB9C",
-    "Partial - OLE Unproven": "#FFEB9C",
-    "Partial - Limited Conditions": "#FFEB9C",
-    "Partial - Some Investigational": "#FFEB9C",
+    "Investigational": "#BDD7EE",
+    "Investigational - Experimental": "#BDD7EE",
+    "Partial - OLE Unproven": "#BDD7EE",
+    "Partial - Limited Conditions": "#BDD7EE",
+    "Partial - Some Investigational": "#BDD7EE",
     "Case-by-Case (No LCD)": "#BDD7EE",
     "Case Review - Prior Auth Needed": "#BDD7EE",
     "Prior Auth Required": "#BDD7EE",
@@ -54,7 +81,11 @@ COVERAGE_COLORS = {
     "Covered - Per Fee Schedule": "#C6EFCE",
     "Covered - Rental Only": "#C6EFCE",
     "Varies - EIU or Clinical Review": "#BDD7EE",
-    "Reference Only": "#E2E8F0",
+    "Reference Only": "#BDD7EE",
+    # Simplified categories
+    "Covered": "#C6EFCE",
+    "Not Covered": "#FFC7CE",
+    "Prior-Auth Required": "#BDD7EE",
 }
 
 
@@ -149,9 +180,11 @@ def get_payers():
 
     payers = [dict(row) for row in cur.fetchall()]
 
-    # Add color codes
+    # Add color codes and normalized category
     for payer in payers:
-        payer['color_code'] = COVERAGE_COLORS.get(payer['coverage_status'], '#E2E8F0')
+        normalized = normalize_coverage_status(payer['coverage_status'])
+        payer['coverage_category'] = normalized
+        payer['color_code'] = COVERAGE_CATEGORIES.get(normalized, '#E2E8F0')
 
     conn.close()
 
@@ -193,7 +226,9 @@ def get_payer(payer_id):
 
     if payer:
         payer = dict(payer)
-        payer['color_code'] = COVERAGE_COLORS.get(payer['coverage_status'], '#E2E8F0')
+        normalized = normalize_coverage_status(payer['coverage_status'])
+        payer['coverage_category'] = normalized
+        payer['color_code'] = COVERAGE_CATEGORIES.get(normalized, '#E2E8F0')
         return jsonify(payer)
     else:
         return jsonify({'error': 'Payer not found'}), 404
@@ -243,21 +278,9 @@ def update_payer(payer_id):
 
 @app.route('/api/coverage-statuses')
 def get_coverage_statuses():
-    """Get distinct coverage statuses."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT DISTINCT coverage_status
-        FROM payer_policies
-        WHERE coverage_status IS NOT NULL
-        ORDER BY coverage_status
-    """)
-
-    statuses = [row['coverage_status'] for row in cur.fetchall()]
-    conn.close()
-
-    return jsonify(statuses)
+    """Get the 3 simplified coverage categories."""
+    # Return only the 3 simplified categories
+    return jsonify(["Covered", "Prior-Auth Required", "Not Covered"])
 
 
 @app.route('/api/payer-types')
@@ -326,21 +349,25 @@ def get_aggregates():
     """)
     investigational_counts = [dict(row) for row in cur.fetchall()]
 
-    # Coverage summary (simplified categories)
+    # Coverage summary (3 simplified categories)
     cur.execute("""
-        SELECT
-            CASE
-                WHEN coverage_status LIKE 'NOT COVERED%' THEN 'Not Covered'
-                WHEN coverage_status LIKE 'Investigational%' THEN 'Investigational'
-                WHEN coverage_status LIKE 'Covered%' THEN 'Covered'
-                WHEN coverage_status LIKE 'Partial%' THEN 'Partial'
-                WHEN coverage_status LIKE 'Case%' OR coverage_status LIKE 'Prior Auth%' THEN 'Case-by-Case/Prior Auth'
-                ELSE 'Other'
-            END as category,
-            COUNT(*) as count
-        FROM payer_policies
+        SELECT category, SUM(cnt) as count FROM (
+            SELECT
+                CASE
+                    WHEN coverage_status LIKE 'NOT COVERED%' OR coverage_status LIKE '%Non-Reimbursable%' THEN 'Not Covered'
+                    WHEN coverage_status LIKE 'Covered%' THEN 'Covered'
+                    ELSE 'Prior-Auth Required'
+                END as category,
+                1 as cnt
+            FROM payer_policies
+        ) subq
         GROUP BY category
-        ORDER BY count DESC
+        ORDER BY
+            CASE category
+                WHEN 'Covered' THEN 1
+                WHEN 'Prior-Auth Required' THEN 2
+                WHEN 'Not Covered' THEN 3
+            END
     """)
     summary_counts = [dict(row) for row in cur.fetchall()]
 
