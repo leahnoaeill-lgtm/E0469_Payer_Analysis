@@ -13,6 +13,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
 import os
+import requests
+import re
 
 app = Flask(__name__)
 
@@ -577,6 +579,137 @@ def export_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={'Content-Disposition': f'attachment; filename={filename}'}
     )
+
+
+@app.route('/api/payers', methods=['POST'])
+def add_payer():
+    """Add a new payer with policy."""
+    data = request.get_json()
+
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': 'Payer name is required'}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Check if payer already exists
+        cur.execute("SELECT id FROM payers WHERE name = %s", [name])
+        existing = cur.fetchone()
+        if existing:
+            return jsonify({'error': f'Payer "{name}" already exists'}), 400
+
+        # Insert payer
+        cur.execute("""
+            INSERT INTO payers (name, payer_type)
+            VALUES (%s, %s)
+            RETURNING id
+        """, (name, data.get('payer_type', '')))
+        payer_id = cur.fetchone()['id']
+
+        # Insert policy if coverage status provided
+        if data.get('coverage_status') or data.get('source_url') or data.get('notes'):
+            cur.execute("""
+                INSERT INTO payer_policies (
+                    payer_id, coverage_status, prior_auth_required,
+                    investigational, notes, source_url
+                ) VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                payer_id,
+                data.get('coverage_status', ''),
+                data.get('prior_auth_required', ''),
+                data.get('investigational', ''),
+                data.get('notes', ''),
+                data.get('source_url', '')
+            ))
+
+        conn.commit()
+        return jsonify({'success': True, 'id': payer_id})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/web-search', methods=['POST'])
+def web_search():
+    """Search the web for E0469 payer policies."""
+    data = request.get_json()
+    query = data.get('query', '').strip()
+
+    if not query:
+        return jsonify({'error': 'Search query is required'}), 400
+
+    # Build search query for E0469 policies
+    search_query = f'"{query}" "E0469" policy site:.gov OR site:.com OR site:.org filetype:pdf OR medical policy'
+
+    try:
+        # Use DuckDuckGo HTML search (no API key required)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+
+        # Search DuckDuckGo
+        search_url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(search_query)}"
+        response = requests.get(search_url, headers=headers, timeout=10)
+
+        results = []
+
+        if response.status_code == 200:
+            # Parse results from HTML
+            # Extract URLs and titles from DuckDuckGo results
+            html = response.text
+
+            # Find result links - DuckDuckGo uses class="result__a"
+            pattern = r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([^<]*)</a>'
+            matches = re.findall(pattern, html, re.IGNORECASE)
+
+            for url, title in matches[:10]:  # Limit to 10 results
+                # Clean up URL (DuckDuckGo wraps URLs)
+                if 'uddg=' in url:
+                    url_match = re.search(r'uddg=([^&]+)', url)
+                    if url_match:
+                        url = requests.utils.unquote(url_match.group(1))
+
+                # Filter for likely policy documents
+                if any(x in url.lower() for x in ['policy', 'medical', 'coverage', '.pdf', 'provider']):
+                    results.append({
+                        'title': title.strip(),
+                        'url': url
+                    })
+
+        # Also search Google (backup)
+        if len(results) < 5:
+            google_url = f"https://www.google.com/search?q={requests.utils.quote(search_query)}"
+            try:
+                g_response = requests.get(google_url, headers=headers, timeout=10)
+                if g_response.status_code == 200:
+                    # Extract URLs from Google results
+                    g_pattern = r'<a[^>]*href="/url\?q=([^"&]+)[^"]*"'
+                    g_matches = re.findall(g_pattern, g_response.text)
+                    for url in g_matches[:5]:
+                        url = requests.utils.unquote(url)
+                        if not any(x in url for x in ['google.com', 'youtube.com', 'facebook.com']):
+                            if url not in [r['url'] for r in results]:
+                                results.append({
+                                    'title': url.split('/')[-1][:50] or 'Policy Document',
+                                    'url': url
+                                })
+            except:
+                pass  # Google search is optional fallback
+
+        return jsonify({
+            'query': query,
+            'results': results[:10]
+        })
+
+    except requests.Timeout:
+        return jsonify({'error': 'Search timed out. Please try again.'}), 504
+    except Exception as e:
+        return jsonify({'error': f'Search failed: {str(e)}'}), 500
 
 
 if __name__ == '__main__':

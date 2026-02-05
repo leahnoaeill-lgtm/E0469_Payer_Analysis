@@ -404,6 +404,209 @@
             color: #64748b;
         }
 
+        /* Three-dot Menu */
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        .menu-container {
+            position: relative;
+        }
+
+        .menu-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            line-height: 1;
+        }
+
+        .menu-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 220px;
+            z-index: 1000;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #333;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 0.95em;
+        }
+
+        .menu-item:hover {
+            background: #f1f5f9;
+        }
+
+        .menu-item svg {
+            width: 20px;
+            height: 20px;
+            color: #64748b;
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 4px 0;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            color: #1a365d;
+            margin-bottom: 16px;
+            font-size: 1.3em;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 12px;
+        }
+
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .search-result-item {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+
+        .search-result-item:hover {
+            background: #f8fafc;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            color: #1a365d;
+            margin-bottom: 4px;
+        }
+
+        .search-result-url {
+            font-size: 0.85em;
+            color: #64748b;
+            word-break: break-all;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .status-message.info {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .status-message.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-message.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #2c5282;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .search-form {
@@ -426,9 +629,106 @@
 </head>
 <body>
     <header>
-        <h1>E0469 Payer Coverage Dashboard</h1>
-        <p>HCPCS E0469: Lung expansion airway clearance, continuous high frequency oscillation, and nebulization device</p>
+        <div class="header-content">
+            <div class="header-text">
+                <h1>E0469 Payer Coverage Dashboard</h1>
+                <p>HCPCS E0469: Lung expansion airway clearance, continuous high frequency oscillation, and nebulization device</p>
+            </div>
+            <div class="menu-container">
+                <button class="menu-btn" onclick="toggleMenu()" title="Menu">⋮</button>
+                <div class="menu-dropdown" id="menuDropdown">
+                    <button class="menu-item" onclick="refreshData()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                        </svg>
+                        Refresh Data
+                    </button>
+                    <div class="menu-divider"></div>
+                    <button class="menu-item" onclick="openSearchModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        Search Web for Payers
+                    </button>
+                    <button class="menu-item" onclick="openAddPayerModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add New Payer
+                    </button>
+                </div>
+            </div>
+        </div>
     </header>
+
+    <!-- Web Search Modal -->
+    <div class="modal-overlay" id="searchModal">
+        <div class="modal">
+            <h2>Search Web for E0469 Payer Policies</h2>
+            <div class="modal-body">
+                <input type="text" class="search-input" id="webSearchInput"
+                       placeholder="Enter payer name (e.g., 'Anthem BCBS')"
+                       onkeypress="if(event.key==='Enter')performWebSearch()">
+                <div id="searchStatus"></div>
+                <div class="search-results" id="searchResults" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSearchModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="performWebSearch()">Search</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Payer Modal -->
+    <div class="modal-overlay" id="addPayerModal">
+        <div class="modal">
+            <h2>Add New Payer</h2>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Payer Name *</label>
+                    <input type="text" class="search-input" id="newPayerName" placeholder="e.g., Blue Cross Blue Shield Arizona">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Payer Type</label>
+                    <select class="search-input" id="newPayerType">
+                        <option value="">Select type...</option>
+                        <option value="BCBS">BCBS</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Medicare Advantage">Medicare Advantage</option>
+                        <option value="Medicare MAC">Medicare MAC</option>
+                        <option value="Medicaid">Medicaid</option>
+                        <option value="Medicaid MCO">Medicaid MCO</option>
+                        <option value="Regional">Regional</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Coverage Status</label>
+                    <select class="search-input" id="newCoverageStatus">
+                        <option value="">Select status...</option>
+                        <option value="Covered with Criteria">Covered with Criteria</option>
+                        <option value="Covered with Prior Auth">Covered with Prior Auth</option>
+                        <option value="NOT COVERED">NOT COVERED</option>
+                        <option value="Investigational">Investigational</option>
+                        <option value="Prior Auth Required">Prior Auth Required</option>
+                        <option value="Case-by-Case (No LCD)">Case-by-Case (No LCD)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Policy Source URL</label>
+                    <input type="text" class="search-input" id="newSourceUrl" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea class="search-input" id="newNotes" rows="3" placeholder="E0469 coverage details..."></textarea>
+                </div>
+                <div id="addPayerStatus"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddPayerModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="addNewPayer()">Add Payer</button>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <!-- Tabs -->
@@ -855,6 +1155,174 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Menu Functions
+        function toggleMenu() {
+            const menu = document.getElementById('menuDropdown');
+            menu.classList.toggle('show');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-container')) {
+                document.getElementById('menuDropdown').classList.remove('show');
+            }
+        });
+
+        function refreshData() {
+            toggleMenu();
+            loadAggregates();
+            loadPayers(currentPage);
+            if (document.getElementById('searched-tab').classList.contains('active')) {
+                loadSearchedPayers(searchedPage);
+            }
+        }
+
+        // Web Search Modal
+        function openSearchModal() {
+            toggleMenu();
+            document.getElementById('searchModal').classList.add('show');
+            document.getElementById('webSearchInput').focus();
+            document.getElementById('searchStatus').innerHTML = '';
+            document.getElementById('searchResults').style.display = 'none';
+        }
+
+        function closeSearchModal() {
+            document.getElementById('searchModal').classList.remove('show');
+            document.getElementById('webSearchInput').value = '';
+            document.getElementById('searchStatus').innerHTML = '';
+            document.getElementById('searchResults').style.display = 'none';
+        }
+
+        async function performWebSearch() {
+            const query = document.getElementById('webSearchInput').value.trim();
+            if (!query) {
+                document.getElementById('searchStatus').innerHTML =
+                    '<div class="status-message error">Please enter a payer name to search</div>';
+                return;
+            }
+
+            document.getElementById('searchStatus').innerHTML =
+                '<div class="status-message info"><span class="spinner"></span>Searching for E0469 policies...</div>';
+            document.getElementById('searchResults').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/web-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('searchStatus').innerHTML =
+                        `<div class="status-message error">${escapeHtml(data.error)}</div>`;
+                    return;
+                }
+
+                if (data.results && data.results.length > 0) {
+                    document.getElementById('searchStatus').innerHTML =
+                        `<div class="status-message success">Found ${data.results.length} potential policy sources</div>`;
+
+                    const resultsHtml = data.results.map(r => `
+                        <div class="search-result-item" onclick="selectSearchResult('${escapeHtml(r.url)}', '${escapeHtml(r.title)}')">
+                            <div class="search-result-title">${escapeHtml(r.title)}</div>
+                            <div class="search-result-url">${escapeHtml(r.url)}</div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('searchResults').innerHTML = resultsHtml;
+                    document.getElementById('searchResults').style.display = 'block';
+                } else {
+                    document.getElementById('searchStatus').innerHTML =
+                        '<div class="status-message info">No explicit E0469 policy documents found. Try a different payer name.</div>';
+                }
+            } catch (err) {
+                document.getElementById('searchStatus').innerHTML =
+                    `<div class="status-message error">Search failed: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function selectSearchResult(url, title) {
+            closeSearchModal();
+            openAddPayerModal();
+            document.getElementById('newSourceUrl').value = url;
+            document.getElementById('newNotes').value = `Found via web search: ${title}`;
+        }
+
+        // Add Payer Modal
+        function openAddPayerModal() {
+            document.getElementById('addPayerModal').classList.add('show');
+            document.getElementById('newPayerName').focus();
+            document.getElementById('addPayerStatus').innerHTML = '';
+        }
+
+        function closeAddPayerModal() {
+            document.getElementById('addPayerModal').classList.remove('show');
+            document.getElementById('newPayerName').value = '';
+            document.getElementById('newPayerType').value = '';
+            document.getElementById('newCoverageStatus').value = '';
+            document.getElementById('newSourceUrl').value = '';
+            document.getElementById('newNotes').value = '';
+            document.getElementById('addPayerStatus').innerHTML = '';
+        }
+
+        async function addNewPayer() {
+            const name = document.getElementById('newPayerName').value.trim();
+            if (!name) {
+                document.getElementById('addPayerStatus').innerHTML =
+                    '<div class="status-message error">Payer name is required</div>';
+                return;
+            }
+
+            const payer = {
+                name: name,
+                payer_type: document.getElementById('newPayerType').value,
+                coverage_status: document.getElementById('newCoverageStatus').value,
+                source_url: document.getElementById('newSourceUrl').value,
+                notes: document.getElementById('newNotes').value
+            };
+
+            document.getElementById('addPayerStatus').innerHTML =
+                '<div class="status-message info"><span class="spinner"></span>Adding payer...</div>';
+
+            try {
+                const response = await fetch('/api/payers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payer)
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('addPayerStatus').innerHTML =
+                        `<div class="status-message error">${escapeHtml(data.error)}</div>`;
+                    return;
+                }
+
+                document.getElementById('addPayerStatus').innerHTML =
+                    '<div class="status-message success">Payer added successfully!</div>';
+
+                setTimeout(() => {
+                    closeAddPayerModal();
+                    refreshData();
+                }, 1000);
+            } catch (err) {
+                document.getElementById('addPayerStatus').innerHTML =
+                    `<div class="status-message error">Failed to add payer: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show');
+                }
+            });
+        });
     </script>
 </body>
 </html>
