@@ -19,8 +19,8 @@ Building a comprehensive spreadsheet of US insurance payers with **explicit E046
 
 | File | Purpose |
 |------|---------|
-| `/Users/leahnoaeill/Downloads/MyClaude/data_export/E0469_Explicit_Payer_Policies.py` | Python script that generates the Excel spreadsheet |
-| `/Users/leahnoaeill/Downloads/MyClaude/data_export/E0469_Explicit_Payer_Policies.xlsx` | Output spreadsheet with payer data |
+| `E0469_Explicit_Payer_Policies.py` | Python script that generates the Excel spreadsheet |
+| `E0469_Explicit_Payer_Policies.xlsx` | Output spreadsheet with payer data |
 
 ### Spreadsheet Statistics (as of Feb 4, 2026)
 
@@ -227,8 +227,7 @@ When reviewing policies, use the exact language from the policy document rather 
 
 3. Run the script to regenerate the spreadsheet:
    ```bash
-   cd /Users/leahnoaeill/Downloads/MyClaude
-   python3 data_export/E0469_Explicit_Payer_Policies.py
+   python3 E0469_Explicit_Payer_Policies.py
    ```
 
 ### Suggested Search Targets
@@ -267,8 +266,8 @@ A Python script was created to enable Claude to read PDFs directly via Bash, sol
 
 | File | Purpose |
 |------|---------|
-| `/Users/leahnoaeill/Downloads/MyClaude/mcp_pdf_server/pdf_extractor.py` | Script that extracts text from PDF URLs |
-| `/Users/leahnoaeill/Downloads/MyClaude/mcp_pdf_server/requirements.txt` | Python dependencies (PyMuPDF) |
+| `mcp_pdf_server/pdf_extractor.py` | Script that extracts text from PDF URLs |
+| `mcp_pdf_server/requirements.txt` | Python dependencies (PyMuPDF) |
 
 ### Setup (Already Completed)
 
@@ -283,13 +282,13 @@ Claude can call this script via Bash to read PDFs:
 
 ```bash
 # Search for a specific term (most useful for policy searches)
-python3 /Users/leahnoaeill/Downloads/MyClaude/mcp_pdf_server/pdf_extractor.py search "<PDF_URL>" "E0469"
+python3 mcp_pdf_server/pdf_extractor.py search "<PDF_URL>" "E0469"
 
 # Extract all text from a PDF
-python3 /Users/leahnoaeill/Downloads/MyClaude/mcp_pdf_server/pdf_extractor.py extract "<PDF_URL>"
+python3 mcp_pdf_server/pdf_extractor.py extract "<PDF_URL>"
 
 # Extract only first N pages
-python3 /Users/leahnoaeill/Downloads/MyClaude/mcp_pdf_server/pdf_extractor.py extract "<PDF_URL>" 5
+python3 mcp_pdf_server/pdf_extractor.py extract "<PDF_URL>" 5
 ```
 
 ### Tested & Working
@@ -308,11 +307,10 @@ Successfully tested on:
 
 ```bash
 # Regenerate spreadsheet
-cd /Users/leahnoaeill/Downloads/MyClaude
-python3 data_export/E0469_Explicit_Payer_Policies.py
+python3 E0469_Explicit_Payer_Policies.py
 
 # View current payer count
-grep -c '"name":' data_export/E0469_Explicit_Payer_Policies.py
+grep -c '"name":' E0469_Explicit_Payer_Policies.py
 ```
 
 ## Session History
