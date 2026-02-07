@@ -727,11 +727,12 @@ def add_payer():
             return jsonify({'error': f'Payer "{name}" already exists'}), 400
 
         # Insert payer
+        state = data.get('state', '').strip().upper() or None
         cur.execute("""
-            INSERT INTO payers (name, payer_type)
-            VALUES (%s, %s)
+            INSERT INTO payers (name, payer_type, state)
+            VALUES (%s, %s, %s)
             RETURNING id
-        """, (name, data.get('payer_type', '')))
+        """, (name, data.get('payer_type', ''), state))
         payer_id = cur.fetchone()['id']
 
         # Insert policy if coverage status provided
@@ -739,13 +740,16 @@ def add_payer():
             cur.execute("""
                 INSERT INTO payer_policies (
                     payer_id, coverage_status, prior_auth_required,
-                    investigational, notes, source_url
-                ) VALUES (%s, %s, %s, %s, %s, %s)
+                    investigational, policy_date, policy_number,
+                    notes, source_url
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 payer_id,
                 data.get('coverage_status', ''),
                 data.get('prior_auth_required', ''),
                 data.get('investigational', ''),
+                data.get('policy_date', ''),
+                data.get('policy_number', ''),
                 data.get('notes', ''),
                 data.get('source_url', '')
             ))

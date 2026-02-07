@@ -419,6 +419,7 @@ grep -c '"name":' E0469_Explicit_Payer_Policies.py
   - **Northwoods Medical added** (ID 84): New payer — Prior-Auth Required, investigational Yes, no state, policy date November 3, 2025. Added to both local and AWS. Payer count: 69 → 70.
   - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. Northwoods Medical DB addition already applied. Dashboard verified running on port 5002.
   - **Menu cleanup**: Removed "Refresh Data" and "Search Web for Payers" buttons from dashboard top menu. Remaining menu items: Coverage Heatmap, Add New Payer. Deployed to AWS.
+  - **Add New Payer form updated**: Added missing fields to the form: State (2-letter code), Prior Auth Required (Yes/No/Not Specified), Investigational (Yes/No/Not Specified), Policy Date, Policy Number. Updated frontend form, JS submit function, and backend API to handle all fields. Deployed to AWS.
   - **Dashboard changes**:
     - Added **Investigational** stat card to top of dashboard (alongside Total Payers, Covered, Prior-Auth, Not Covered)
     - Added **Investigational** bar to Coverage Summary chart

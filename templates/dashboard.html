@@ -730,6 +730,10 @@
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
+                    <label>State</label>
+                    <input type="text" class="search-input" id="newPayerState" placeholder="e.g., CA (2-letter code, leave blank for national)" maxlength="2" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
                     <label>Coverage Status</label>
                     <select class="search-input" id="newCoverageStatus">
                         <option value="">Select status...</option>
@@ -737,6 +741,32 @@
                         <option value="Not Covered">Not Covered</option>
                         <option value="Prior-Auth Required">Prior-Auth Required</option>
                     </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Prior Auth Required</label>
+                    <select class="search-input" id="newPriorAuth">
+                        <option value="">Select...</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Not Specified">Not Specified</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Investigational</label>
+                    <select class="search-input" id="newInvestigational">
+                        <option value="">Select...</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Not Specified">Not Specified</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Policy Date</label>
+                    <input type="text" class="search-input" id="newPolicyDate" placeholder="e.g., January 1, 2025">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Policy Number</label>
+                    <input type="text" class="search-input" id="newPolicyNumber" placeholder="e.g., HUM-2007-001">
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
                     <label>Policy Source URL</label>
@@ -1294,7 +1324,12 @@
             document.getElementById('addPayerModal').classList.remove('show');
             document.getElementById('newPayerName').value = '';
             document.getElementById('newPayerType').value = '';
+            document.getElementById('newPayerState').value = '';
             document.getElementById('newCoverageStatus').value = '';
+            document.getElementById('newPriorAuth').value = '';
+            document.getElementById('newInvestigational').value = '';
+            document.getElementById('newPolicyDate').value = '';
+            document.getElementById('newPolicyNumber').value = '';
             document.getElementById('newSourceUrl').value = '';
             document.getElementById('newNotes').value = '';
             document.getElementById('addPayerStatus').innerHTML = '';
@@ -1311,7 +1346,12 @@
             const payer = {
                 name: name,
                 payer_type: document.getElementById('newPayerType').value,
+                state: document.getElementById('newPayerState').value.toUpperCase(),
                 coverage_status: document.getElementById('newCoverageStatus').value,
+                prior_auth_required: document.getElementById('newPriorAuth').value,
+                investigational: document.getElementById('newInvestigational').value,
+                policy_date: document.getElementById('newPolicyDate').value,
+                policy_number: document.getElementById('newPolicyNumber').value,
                 source_url: document.getElementById('newSourceUrl').value,
                 notes: document.getElementById('newNotes').value
             };
