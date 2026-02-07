@@ -409,6 +409,15 @@ grep -c '"name":' E0469_Explicit_Payer_Policies.py
   - **FEP Blue (Federal Employee Program) removed** (ID 75): Removed per user request. Moved to searched_payers on local and AWS. Payer count: 70 → 69.
   - **Highmark Health Options (Delaware) removed** (ID 78): Policy MP-1141 does not mention E0469. Moved to searched_payers on local and AWS. Payer count: 69 → 68.
   - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. All recent DB removals (Anthem x2, Noridian JD, CMS DMEPOS, FEP Blue, Highmark) already applied. Dashboard verified running on port 5002.
+  - **GitHub backup**: Pushed all changes to new branch `Updated_Payer_Feb6` on `leahnoaeill-lgtm/E0469_Payer_Analysis`. 9 files committed (321 insertions, 7 deletions). Includes state column, coverage status updates, 11 removals, 10 additions, Docker files, and auth support.
+  - **Humana (Commercial) removed** (ID 22): Generic and outdated policy. More recent Humana Medicare Advantage and Humana Medicaid entries already in database. Moved to searched_payers on local and AWS. Payer count: 68 → 67.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. Humana Commercial DB removal already applied. Dashboard verified running on port 5002.
+  - **CareSource Ohio (Medicaid) updated** (ID 62): Policy date changed from "04/01/2025" to "January 31, 2025". All other fields unchanged (Prior-Auth Required, no investigational). Updated on both local and AWS.
+  - **Anthem Indiana added** (ID 82): New payer — Prior-Auth Required, no investigational, state IN, policy date January 1, 2025. Added to both local and AWS. Payer count: 67 → 68.
+  - **Hawaii Medical Service Association (HMSA) added** (ID 83): New payer — Not Covered, BCBS type, state HI. Codes do not meet payment determination criteria. Added to both local and AWS. Payer count: 68 → 69.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. Anthem Indiana and HMSA DB additions already applied. Dashboard verified running on port 5002.
+  - **Northwoods Medical added** (ID 84): New payer — Prior-Auth Required, investigational Yes, no state, policy date November 3, 2025. Added to both local and AWS. Payer count: 69 → 70.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. Northwoods Medical DB addition already applied. Dashboard verified running on port 5002.
   - **Dashboard changes**:
     - Added **Investigational** stat card to top of dashboard (alongside Total Payers, Covered, Prior-Auth, Not Covered)
     - Added **Investigational** bar to Coverage Summary chart
@@ -486,8 +495,9 @@ Verified all 68 payer source URLs to confirm E0469 is explicitly mentioned. Used
 | **CMS DMEPOS Fee Schedule** | 1 | Not a payer — is a CMS fee schedule reference. Removed from payer list. | Feb 6, 2026 |
 | **FEP Blue (Federal Employee Program)** | 75 | Removed from payer list per user request. | Feb 6, 2026 |
 | **Highmark Health Options (Delaware)** | 78 | Policy MP-1141 does not mention E0469. No explicit E0469 policy available. | Feb 6, 2026 |
+| **Humana (Commercial)** | 22 | Generic and outdated policy. More recent Humana Medicare Advantage and Humana Medicaid entries already in database. | Feb 6, 2026 |
 
-All 11 removed from both local and AWS databases and added to `searched_payers`.
+All 12 removed from both local and AWS databases and added to `searched_payers`.
 
 ### Payers with Broken/Inaccessible Sources (KEEP — user verified manually):
 
@@ -520,7 +530,7 @@ All 11 removed from both local and AWS databases and added to `searched_payers`.
 **Medica**: All 7 state entries (65-71) — same policy URL confirmed
 
 ### Current Database Counts:
-- **Local**: 68 payers, 68 policies, 115 searched
-- **AWS**: 68 payers, 68 policies, 115 searched
+- **Local**: 70 payers, 70 policies, 116 searched
+- **AWS**: 70 payers, 70 policies, 116 searched
 - **Pending re-verification**: BCBS Massachusetts, Cigna (may need re-adding — agents found updated policies with E0469)
 - **Behind secure portals** (need manual verification): Highmark BCBS PA (E-20-016), Arkansas BCBS (Policy 2022013)
