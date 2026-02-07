@@ -15,13 +15,42 @@ from datetime import datetime
 import os
 import requests
 import re
+from functools import wraps
 
 app = Flask(__name__)
+
+# Basic Auth Configuration
+AUTH_USERNAME = os.environ.get("AUTH_USERNAME", "payer")
+AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "")
+
+def check_auth(username, password):
+    """Check if username/password combination is valid."""
+    return username == AUTH_USERNAME and password == AUTH_PASSWORD
+
+def authenticate():
+    """Send 401 response to enable basic auth login."""
+    return Response(
+        'Access denied. Please provide valid credentials.',
+        401,
+        {'WWW-Authenticate': 'Basic realm="E0469 Payer Dashboard"'}
+    )
+
+@app.before_request
+def require_auth_for_all():
+    """Require authentication for all requests."""
+    if not AUTH_PASSWORD:
+        return
+    if request.endpoint == 'static':
+        return
+    auth = request.authorization
+    if not auth or not check_auth(auth.username, auth.password):
+        return authenticate()
 
 # Database configuration
 DB_CONFIG = {
     "dbname": os.environ.get("DB_NAME", "e0469_analysis"),
     "user": os.environ.get("DB_USER", "postgres"),
+    "password": os.environ.get("DB_PASSWORD", ""),
     "host": os.environ.get("DB_HOST", "localhost"),
     "port": int(os.environ.get("DB_PORT", 5432))
 }
@@ -187,7 +216,7 @@ def get_payers():
     sort_dir = request.args.get('sort_dir', 'asc').strip().lower()
 
     # Validate sort parameters
-    allowed_sort_fields = ['name', 'payer_type', 'coverage_status', 'prior_auth_required',
+    allowed_sort_fields = ['name', 'payer_type', 'state', 'coverage_status', 'prior_auth_required',
                            'investigational', 'policy_date', 'policy_number']
     if sort_by not in allowed_sort_fields:
         sort_by = 'name'
@@ -242,6 +271,7 @@ def get_payers():
             p.id,
             p.name,
             p.payer_type,
+            p.state,
             pp.coverage_status,
             pp.prior_auth_required,
             pp.investigational,

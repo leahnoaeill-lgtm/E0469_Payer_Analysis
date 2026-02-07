@@ -1,0 +1,28 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: e0469_dashboard
+    restart: unless-stopped
+    environment:
+      DB_HOST: cms_postgres
+      DB_PORT: 5432
+      DB_NAME: e0469_analysis
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      AUTH_USERNAME: ${AUTH_USERNAME:-payer}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-Dash@E0469}
+    ports:
+      - "5002:5002"
+    networks:
+      - cms_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5002/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  cms_network:
+    external: true

@@ -368,3 +368,159 @@ grep -c '"name":' E0469_Explicit_Payer_Policies.py
     - Humana Commercial: NOT COVERED → Investigational - Experimental
     - Humana Medicaid: NOT COVERED → Investigational - Experimental
   - **Only 4 payers explicitly say "NOT COVERED"**: Medica, Minnesota MHCP, Capital Blue Cross, BCBS Illinois
+- **Feb 6, 2026 (Session 2)**: Dashboard deployment and enhancements
+  - **Humana Medicare Advantage updated**: Changed from "Covered" (Prior Auth) to "NOT COVERED" based on Humana policy HUM-2007-001 (Multi-Function Oscillation Lung Expansion Therapy). Updated on both local and AWS.
+  - **Humana Commercial updated**: Changed from "Prior-Auth Required" to "NOT COVERED" based on same Humana policy HUM-2007-001. Updated on both local and AWS.
+  - **Humana Medicaid updated**: Changed from "Prior-Auth Required" to "NOT COVERED" based on same Humana policy HUM-2007-001. Updated on both local and AWS.
+  - **Now 7 payers explicitly say "NOT COVERED"**: Medica, Minnesota MHCP, Capital Blue Cross, BCBS Illinois, Humana Medicare Advantage, Humana Commercial, Humana Medicaid
+  - **Rocky Mountain Health Plans (Colorado) updated**: Changed from "Covered" to "Prior-Auth Required" based on Anthem precertification list (eff. March 1, 2025). Updated source URL. Updated on both local and AWS.
+  - **State column added to dashboard**: Added sortable "State" column to payer coverage table. Added `p.state` to API query and allowed sort fields. Populated missing state values for HealthPartners (MN), Premera/Kaiser WA (WA), Geisinger (PA), Moda Health (OR). 14 national payers remain NULL. Applied to both local and AWS.
+  - **Payer search conducted**: Ran 4 parallel web search agents (BCBS, commercial, Medicaid, Medicare/federal). Found 10 new payers with explicit E0469 mentions. All 10 added to both local and AWS databases (IDs 72-81):
+    - **BCBS Tennessee** - Investigational (OLE), bcbst.com
+    - **BCBS South Carolina** - Investigational (OLE), southcarolinablues.com
+    - **BCBS Louisiana** - Investigational (OLE), Policy 00090
+    - **FEP Blue** (Federal Employee Program) - Investigational (OLE), Policy 10115
+    - **Anthem multi-state** - Investigational (DME.00012), anthem.com
+    - **Medical Mutual of Ohio** - Investigational (Policy 200508), medmutual.com
+    - **Highmark Health Options (DE Medicaid)** - Covered w/ criteria (MP-1141)
+    - **Providence Health Plan (OR Medicare)** - NCD 240.5 non-coverage (MP220)
+    - **McLaren Health Plan (MI Medicaid)** - Prior Auth Required
+    - **New York Medicaid (eMedNY)** - On DME codes list
+  - **Re-verification needed**: BCBS Massachusetts (Policy 120 may now list E0469 as of 10/1/2024) and Cigna (Policy 0069 updated, E0469 effective 01/01/2026) — both were previously removed but agents found updated policies
+  - **Behind secure portals** (need manual verification): Highmark BCBS (E-20-016), Arkansas BCBS (Policy 2022013)
+  - **Latest AWS redeployment**: Updated dashboard.py and templates/dashboard.html via scp to ~/e0469-dashboard/ on AWS. Restarted e0469_dashboard container (`docker compose restart`). Changes deployed: State column in payer table, 10 new payers (IDs 72-81) already in database. Dashboard verified at port 5002.
+  - **Univera Healthcare (New York) updated** (ID 25): Changed from "Covered" to "Prior-Auth Required" based on Univera airway clearance devices policy. Source URL unchanged. Updated on both local and AWS.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to ~/e0469-dashboard/ on AWS via scp. Restarted e0469_dashboard container. Dashboard verified running on port 5002.
+  - **Health Plan of Nevada updated** (ID 35): Changed from "Covered" to "Prior-Auth Required", investigational set to "Yes". Source URL updated to direct PDF: airway-clearance-devices.pdf. Updated on both local and AWS.
+  - **Coverage status normalized**: Fixed inconsistent casing — 3 Humana entries changed from "NOT COVERED" to "Not Covered" to match other entries. Applied to both local and AWS.
+  - **California Medi-Cal (Medicaid) updated** (ID 44): Changed from "Covered" to "Prior-Auth Required", prior auth set to "Yes". Source URL updated to direct PDF: duracd.pdf. Updated on both local and AWS.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. All DB changes (Health Plan of Nevada, Medi-Cal, coverage normalization) already applied. Dashboard verified running on port 5002.
+  - **EmblemHealth (New York) removed** (ID 47): DME rental/purchase policy does not explicitly reference E0469. Moved to searched_payers on both local and AWS. Payer count: 75 → 74.
+  - **Moda Health (Oregon/Alaska) updated** (ID 48): Changed from "Covered" to "Prior-Auth Required". Source URL unchanged (pre-auth-list-commercial.pdf). Updated on both local and AWS.
+  - **Sierra Health and Life (Nevada) updated** (ID 36): Changed from "Covered" to "Prior-Auth Required". Source URL unchanged. Updated on both local and AWS.
+  - **Kaiser Permanente WA (Medicare) updated** (ID 9): Changed from "Covered" to "Prior-Auth Required", investigational set to "Yes". Source URL updated to new-emergingtech.pdf. Updated on both local and AWS.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. All recent DB changes (Moda Health, Sierra Health, Kaiser WA Medicare, EmblemHealth removal) already applied. Dashboard verified running on port 5002.
+  - **Fidelis Care (New York Medicaid) updated** (ID 53): Changed from "Covered" to "Prior-Auth Required". Policy date set to "January 3, 2026". Source URL updated to direct PDF (Medicaid DME Authorization Grid). Updated on both local and AWS.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. Fidelis Care DB change already applied. Dashboard verified running on port 5002.
+  - **AWS full rebuild**: Synced latest dashboard.py and templates/dashboard.html, then ran `docker compose build --no-cache && docker compose up -d` to fully rebuild container with all latest code including State column in table view. Dashboard verified running on port 5002.
+  - **Anthem entries removed**: Anthem (Elevance Health) (ID 76) — policy DME.00012 explicitly removed E0469. Anthem Blue Cross Connecticut (ID 23) — unverified genhealth.ai source, same policy no longer covers E0469. Both moved to searched_payers on local and AWS. Payer count: 74 → 72.
+  - **Noridian Medicare (JD DME) removed** (ID 27): Not a payer — is a DME MAC (Medicare Administrative Contractor). Moved to searched_payers on local and AWS. Payer count: 72 → 71.
+  - **CMS DMEPOS Fee Schedule removed** (ID 1): Not a payer — is a CMS fee schedule reference. Moved to searched_payers on local and AWS. Payer count: 71 → 70.
+  - **FEP Blue (Federal Employee Program) removed** (ID 75): Removed per user request. Moved to searched_payers on local and AWS. Payer count: 70 → 69.
+  - **Highmark Health Options (Delaware) removed** (ID 78): Policy MP-1141 does not mention E0469. Moved to searched_payers on local and AWS. Payer count: 69 → 68.
+  - **AWS redeployment**: Synced latest dashboard.py and templates/dashboard.html to AWS. Restarted e0469_dashboard container. All recent DB removals (Anthem x2, Noridian JD, CMS DMEPOS, FEP Blue, Highmark) already applied. Dashboard verified running on port 5002.
+  - **Dashboard changes**:
+    - Added **Investigational** stat card to top of dashboard (alongside Total Payers, Covered, Prior-Auth, Not Covered)
+    - Added **Investigational** bar to Coverage Summary chart
+    - Updated **Geisinger Health Plan** from "Covered" to "Prior-Auth Required"
+  - **Authentication added**:
+    - Added HTTP Basic Auth to dashboard.py (same pattern as CMS Dashboard)
+    - Local: auth disabled by default (empty password)
+    - AWS: username `payer`, password `Dash@E0469`
+    - Auth env vars: `AUTH_USERNAME`, `AUTH_PASSWORD`
+  - **AWS Deployment** (new):
+    - Deployed to EC2: `ec2-44-251-113-46.us-west-2.compute.amazonaws.com:5002`
+    - SSH key: `~/downloads/ABMRCKEY.pem`, user: `ubuntu`
+    - Docker container `e0469_dashboard` on port 5002
+    - Reuses existing `cms_postgres` container (shared PostgreSQL, separate `e0469_analysis` database)
+    - Connected via `cms_network` Docker network
+    - Project directory on server: `~/e0469-dashboard/`
+    - 2 gunicorn workers (conserving RAM on 1.8 GB server)
+  - **Files created for deployment**:
+    - `requirements.txt` - Flask, psycopg2-binary, openpyxl, requests, gunicorn
+    - `Dockerfile` - python:3.11-slim, gunicorn on port 5002
+    - `docker-compose.yml` - single service, external cms_network, port 5002:5002
+    - `.dockerignore` - excludes xlsx, logs, mcp_pdf_server
+  - **Code changes**:
+    - Added `DB_PASSWORD` env var support to `dashboard.py` and `load_data.py` (required for Docker PostgreSQL auth)
+    - Added `functools.wraps` import and Basic Auth middleware to `dashboard.py`
+  - **Database on AWS**: 69 payers, 69 policies, 104 searched payers (exported via pg_dump from local)
+  - **AWS server state**: 3 containers running (cms_dashboard:5001, e0469_dashboard:5002, cms_postgres:5432)
+  - **Updated CLAUDE.md** with AWS connection info, credentials, and Docker commands
+
+## AWS Deployment Architecture
+
+```
+EC2 Instance (Ubuntu 24.04, Docker 28.2.2, 1.8 GB RAM)
+├── cms_network (Docker network)
+│   ├── cms_postgres (port 5432) - shared PostgreSQL
+│   │   ├── cms_analysis database (CMS E0483 dashboard)
+│   │   └── e0469_analysis database (E0469 payer dashboard)
+│   ├── cms_dashboard (port 5001) - CMS DME Dashboard
+│   │   └── Login: cms / Dash@E0469
+│   └── e0469_dashboard (port 5002) - E0469 Payer Dashboard
+│       └── Login: payer / Dash@E0469
+└── Project directories
+    ├── ~/cms-dashboard/
+    └── ~/e0469-dashboard/
+```
+
+### AWS Connection
+```bash
+# SSH
+ssh -i ~/downloads/ABMRCKEY.pem ubuntu@ec2-44-251-113-46.us-west-2.compute.amazonaws.com
+
+# Manage E0469 dashboard
+cd ~/e0469-dashboard && docker compose ps|logs|restart
+
+# Manage CMS dashboard
+cd ~/cms-dashboard && docker compose ps|logs|restart
+```
+
+## E0469 Source Verification Audit (Feb 6, 2026)
+
+Verified all 68 payer source URLs to confirm E0469 is explicitly mentioned. Used PDF extractor tool and web fetch.
+
+### Payers REMOVED (E0469 not in source — moved to searched_payers):
+
+| Payer | ID | Reason | Removed |
+|-------|----|--------|---------|
+| **Excellus BlueCross BlueShield (NY)** | 31 | Policy 1.01.15 lists E0480-E0484 but NOT E0469. | Feb 6, 2026 |
+| **BCBS Massachusetts** | 34 | Policy lists E0481, E0483, E0484, S8185 only — no E0469. Not updated for new code. | Feb 6, 2026 |
+| **Cigna** | 20 | Policy lists E0481, E0482, E0483, E1399 only — not updated for E0469 (eff 10/1/2024). | Feb 6, 2026 |
+| **BCBS Michigan** | 51 | DIFS external review discusses Volara device but coded under E1399/A9999. E0469 code never appears in document. | Feb 6, 2026 |
+| **EmblemHealth (New York)** | 47 | DME rental/purchase policy does not explicitly reference E0469. | Feb 6, 2026 |
+| **Anthem Blue Cross Connecticut** | 23 | Source was third-party aggregator (genhealth.ai). CG-DME-43 policy covers E0483 but E0469 was removed. | Feb 6, 2026 |
+| **Anthem (Elevance Health)** | 76 | Policy DME.00012 explicitly removed E0469 from coverage. E0469 no longer in policy. | Feb 6, 2026 |
+| **Noridian Medicare (JD DME)** | 27 | Not a payer — is a DME MAC (Medicare Administrative Contractor). Removed from payer list. | Feb 6, 2026 |
+| **CMS DMEPOS Fee Schedule** | 1 | Not a payer — is a CMS fee schedule reference. Removed from payer list. | Feb 6, 2026 |
+| **FEP Blue (Federal Employee Program)** | 75 | Removed from payer list per user request. | Feb 6, 2026 |
+| **Highmark Health Options (Delaware)** | 78 | Policy MP-1141 does not mention E0469. No explicit E0469 policy available. | Feb 6, 2026 |
+
+All 11 removed from both local and AWS databases and added to `searched_payers`.
+
+### Payers with Broken/Inaccessible Sources (KEEP — user verified manually):
+
+| Payer | ID | Issue |
+|-------|----|-------|
+| **Humana Commercial** | 22 | Source is genhealth.ai (third-party aggregator) — doesn't list E0469. Needs direct Humana policy URL. |
+| **BCBS Texas** | 56 | URL returns 404 error. User added from manual PDF review of fee schedule. |
+| **BCBS Illinois** | 57 | General portal page, no codes visible. User added from manual PDF review (EIU Non-Reimbursable). |
+| **BCBS New Mexico** | 58 | General portal page, no codes visible. User added from manual PDF review (Recommended Clinical Review). |
+| **BCBS Florida** | 7 | JS-rendered SPA, can't extract content programmatically. |
+| **Rocky Mountain Health Plans** | 19 | JS-rendered portal, no policy content accessible. |
+| **Minnesota MHCP** | 6 | Website WAF blocks automated access (Radware). |
+
+### Payers CONFIRMED (E0469 explicitly found in source):
+
+**Medicare/CMS**: CMS DMEPOS (1), Noridian JA (2), Noridian JD (27), CGS JB (3)
+
+**BCBS Plans**: BCBS Kansas (33), BCBS NC (32), BCBS RI (49), BCBS Vermont (61), BCBS Nebraska (59), BCBS Minnesota (60), Wellmark BCBS (50)
+
+**Commercial**: Aetna (46), Premera (8), Moda Health (48), Kaiser WA Medicare (9), Kaiser WA Non-Medicare (10)
+
+**Humana**: Humana Medicaid (45), Humana Medicare Advantage (21)
+
+**Regional**: Univera Healthcare (25), Geisinger (24), Health Plan of Nevada (35), Sierra Health and Life (36), EmblemHealth (47)
+
+**Medicaid**: California Medi-Cal (44), Kentucky Medicaid (54), Fidelis Care NY (53), Lifewise WA (52), CareSource OH (62), Select Health UT (63), Select Health ID (64)
+
+**UHC Plans**: UHC Commercial (11), UHC Individual Exchange (13), UHC Oxford (16), UMR (14), Surest (15), UHC Community Plan (12), + all UHC Medicaid state plans (17, 18, 28-30, 37-43)
+
+**Medica**: All 7 state entries (65-71) — same policy URL confirmed
+
+### Current Database Counts:
+- **Local**: 68 payers, 68 policies, 115 searched
+- **AWS**: 68 payers, 68 policies, 115 searched
+- **Pending re-verification**: BCBS Massachusetts, Cigna (may need re-adding — agents found updated policies with E0469)
+- **Behind secure portals** (need manual verification): Highmark BCBS PA (E-20-016), Arkansas BCBS (Policy 2022013)

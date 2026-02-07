@@ -50,6 +50,34 @@ E0469_Payer_Analysis/
 - `searched_payers` - Payers searched but no E0469 policy found
 - `coverage_categories` - Reference table for coverage status colors
 
+## AWS Server Deployment
+
+| Setting | Value |
+|---------|-------|
+| **Hostname** | `ec2-44-251-113-46.us-west-2.compute.amazonaws.com` |
+| **Public IP** | `44.251.113.46` |
+| **Region** | us-west-2 (Oregon) |
+| **SSH User** | `ubuntu` |
+| **SSH Key** | `~/downloads/ABMRCKEY.pem` |
+| **Dashboard URL** | `http://ec2-44-251-113-46.us-west-2.compute.amazonaws.com:5002` |
+| **Portal Username** | `payer` |
+| **Portal Password** | `Dash@E0469` |
+
+### SSH Access
+```bash
+ssh -i ~/downloads/ABMRCKEY.pem ubuntu@ec2-44-251-113-46.us-west-2.compute.amazonaws.com
+```
+
+### Docker Commands (on AWS)
+```bash
+cd ~/e0469-dashboard
+docker compose ps
+docker compose logs -f
+docker compose restart
+docker compose down
+docker compose build --no-cache && docker compose up -d
+```
+
 ## Quick Start
 
 ### 1. Start PostgreSQL

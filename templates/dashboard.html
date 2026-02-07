@@ -791,6 +791,10 @@
                     <h3>Prior-Auth Required</h3>
                     <div class="value" id="statPriorAuth">--</div>
                 </div>
+                <div class="stat-card investigational">
+                    <h3>Investigational</h3>
+                    <div class="value" id="statInvestigational">--</div>
+                </div>
                 <div class="stat-card not-covered">
                     <h3>Not Covered</h3>
                     <div class="value" id="statNotCovered">--</div>
@@ -858,6 +862,7 @@
                         <tr>
                             <th data-field="name" class="sortable">Payer Name</th>
                             <th data-field="payer_type" class="sortable">Type</th>
+                            <th data-field="state" class="sortable">State</th>
                             <th data-field="coverage_status" class="sortable">Coverage Status</th>
                             <th data-field="investigational" class="sortable">Investigational</th>
                             <th data-field="policy_date" class="sortable">Policy Date</th>
@@ -866,7 +871,7 @@
                         </tr>
                     </thead>
                     <tbody id="payersTable">
-                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                        <tr><td colspan="8" class="loading">Loading...</td></tr>
                     </tbody>
                 </table>
                 <div class="pagination" id="pagination"></div>
@@ -990,12 +995,23 @@
                 else if (item.category === 'Prior-Auth Required') priorAuth = item.count;
             });
 
+            // Calculate investigational count
+            let investigational = 0;
+            data.investigational_counts.forEach(item => {
+                if (item.status === 'Investigational') investigational = item.count;
+            });
+
             document.getElementById('statCovered').textContent = covered;
             document.getElementById('statNotCovered').textContent = notCovered;
             document.getElementById('statPriorAuth').textContent = priorAuth;
+            document.getElementById('statInvestigational').textContent = investigational;
 
-            // Render charts
-            renderCoverageChart(data.summary_counts);
+            // Render charts - include investigational in coverage summary
+            const chartData = [...data.summary_counts];
+            if (investigational > 0) {
+                chartData.push({ category: 'Investigational', count: investigational });
+            }
+            renderCoverageChart(chartData);
             renderTypeChart(data.type_counts);
         }
 
@@ -1004,11 +1020,11 @@
             const container = document.getElementById('coverageChart');
             container.innerHTML = '';
 
-            // Simplified 3-category color map
             const colorMap = {
                 'Covered': 'covered',
                 'Not Covered': 'not-covered',
-                'Prior-Auth Required': 'case-by-case'
+                'Prior-Auth Required': 'case-by-case',
+                'Investigational': 'investigational'
             };
 
             data.forEach(item => {
@@ -1069,7 +1085,7 @@
             const tbody = document.getElementById('payersTable');
 
             if (payers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="loading">No payers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="loading">No payers found</td></tr>';
                 return;
             }
 
@@ -1077,6 +1093,7 @@
                 <tr>
                     <td><strong>${p.source_url ? `<a href="${escapeHtml(p.source_url)}" target="_blank" class="source-link">${escapeHtml(p.name)}</a>` : escapeHtml(p.name)}</strong></td>
                     <td>${escapeHtml(p.payer_type || '')}</td>
+                    <td>${escapeHtml(p.state || '')}</td>
                     <td><span class="coverage-badge" style="background: ${p.color_code}">${escapeHtml(p.coverage_category || '')}</span></td>
                     <td>${escapeHtml(p.investigational || '')}</td>
                     <td>${escapeHtml(p.policy_date || '')}</td>

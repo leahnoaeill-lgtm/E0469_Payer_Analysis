@@ -1,0 +1,15 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+.DS_Store
+*.xlsx
+*.log
+*.txt
+!requirements.txt
+.env
+mcp_pdf_server/
+E0469_Explicit_Payer_Policies.py
+E0469_Payer_Coverage_Analysis.py
+SESSION_HANDOVER.md
+CLAUDE.md
