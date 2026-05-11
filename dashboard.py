@@ -488,6 +488,14 @@ def get_searched_payers():
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 50))
     payer_type = request.args.get('payer_type', '').strip()
+    sort_by = request.args.get('sort_by', 'name').strip()
+    sort_dir = request.args.get('sort_dir', 'asc').strip().lower()
+
+    # Allowlist: only Name and Type sortable
+    if sort_by not in ('name', 'payer_type'):
+        sort_by = 'name'
+    if sort_dir not in ('asc', 'desc'):
+        sort_dir = 'asc'
 
     offset = (page - 1) * per_page
 
@@ -510,7 +518,7 @@ def get_searched_payers():
         SELECT id, name, payer_type, notes, date_searched
         FROM searched_payers
         WHERE {where_sql}
-        ORDER BY name
+        ORDER BY {sort_by} {sort_dir} NULLS LAST, name ASC
         LIMIT %s OFFSET %s
     """, params + [per_page, offset])
 

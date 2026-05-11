@@ -628,5 +628,42 @@ This pattern (PA list ≠ coverage policy) drove additional PDF re-verifications
 - **BCBS Texas, Illinois, New Mexico**: Fee schedule lookup tools require provider login — verify codes through Availity portal
 - **BCBS Nebraska MA-X-077**: Portal-based; verify content
 - **Kaiser WA**: Provider portal restricted; PDF accessible via authenticated link only
-- **Highmark BCBS PA (E-20-016)**, **Arkansas BCBS (Policy 2022013)**: Behind secure portals (pre-existing pending items from Feb 6)
+- **Highmark BCBS PA (E-20-016)**: Re-verified 2026-05-10 — confirmed E0469 NOT in policy via direct PDF extraction
 - **Humana Medicaid 9 remaining states** (FL, IL, IN, LA, MI, OH, OK, SC, WI): Locate state-specific policy doc URLs via provider.humana.com portal login, then promote from searched_payers → payers
+
+## May 10, 2026 — Additional work (post-quarterly review)
+
+### Phase 2 PDF re-verification expanded (additional finds)
+- **BCBS Arkansas (NEW PAYER)** — added as active payer. Confirmed E0469 in Coverage Policy 2022013 via direct PDF extraction. Status: Prior-Auth Required, OLE investigational.
+- **CMS DMEPOS Master List update (Jan 13, 2026, eff. Apr 13, 2026)**: E0469 added to the Master List — meaning it's now eligible to be added to F2F/WOPD Required List or Required PA List in the future. Currently NOT on the Required PA List (verified directly).
+
+### Searched_payers cleanup (32 entries removed)
+- **Supplemental insurance (3)**: Aflac, Lincoln Financial, MetLife — structurally don't cover DME
+- **Workers' Comp (4)**: Federal OWCP, NY/CA/TX State WC — covers occupational injury treatment, not OLE
+- **State Medicaid FFS (25)**: PA, OH, MI, NC, VA, NJ, AZ, WA, KY, LA, IN, CT, NV, MD, WI, SC, OR, IL, GA, TX, FL, CO, MS, MT, IN (IHCP) — default to no coverage without published policy
+- **Duplicates (4)**: Medical Mutual OH, ConnectiCare CT, Providence Health OR, HMSA — these were also in active `payers`
+
+### HMSA payer_type update
+- Changed from `BCBS` → `PPO, HMO, Medicare Advantage, Medicaid` (reflects all plan categories HMSA offers; first multi-type entry in DB)
+
+### Date refresh: all 90 remaining searched_payers
+All 90 remaining searched_payers entries now show `date_searched = 2026-05-10`. Tier breakdown by verification depth (in notes field):
+- **Tier 1** (~18 entries): Direct PDF extraction confirmed E0469 NOT in policy
+- **Tier 2** (~22 entries): WebSearch confirmed no public policy URL containing E0469
+- **Tier 3** (~50 entries): Web search inferential (no specific E0469 info located in public sources)
+
+### Dashboard feature added
+- **Searched Payers (No Policy) tab**: Added sortable headers for Payer Name and Type. Backend `/api/searched-payers` now accepts `sort_by` and `sort_dir` params (allowlisted to `name`, `payer_type`). Frontend `searched-sortable` class with separate sort state from main Payers tab.
+
+### Final session state (local + AWS in sync)
+- **Active payers**: 70
+- **Policies**: 70
+- **Searched payers**: 90
+- **All searched dates refreshed to 2026-05-10**
+
+### Cumulative payer count math
+- Feb 6 baseline: 70 payers
+- Today net additions: +4 (Humana Medicaid VA + KY, BCBS Mississippi, BCBS Arkansas)
+- Today net removals: -4 (Humana Medicaid generic, BCBS TN, BCBS SC, BCBS LA)
+- Net: 70 (unchanged)
+- But composition is more accurate: removed 3 incorrectly-added BCBS plans, added 1 previously-missed BCBS, split 1 generic Humana row into 2 confirmed state rows.

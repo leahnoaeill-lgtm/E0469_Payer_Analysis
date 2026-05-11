@@ -198,12 +198,13 @@ lsof -ti:5002 | xargs kill -9
 "E0469" "investigational" OR "not covered" payer
 ```
 
-## Current Statistics (as of May 10, 2026)
+## Current Statistics (as of May 10, 2026 — end of session)
 
-- **Total Payers with Explicit E0469 Policies**: 69 (local + AWS in sync)
-- **Searched Payers (No E0469 Found / Under State Review)**: 127
+- **Total Payers with Explicit E0469 Policies**: 70 (local + AWS in sync)
+- **Searched Payers (No E0469 Found)**: 90 (all refreshed to 2026-05-10)
 - **Last Quarterly Re-Review**: May 10, 2026 (Session 3) — verified all 186 payers via WebSearch + PDF extraction
 - **Last Bulk Audit**: Feb 6, 2026 (Session 2) — source URL verification for all 70 payers
+- **CMS DMEPOS Master List update (Jan 13, 2026, eff Apr 13, 2026)**: E0469 added to Master List — eligible for future PA-Required status but NOT currently required by CMS
 
 ### Coverage status distribution (May 10, 2026)
 Run this query for current breakdown:

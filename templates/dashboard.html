@@ -912,8 +912,8 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Payer Name</th>
-                            <th>Type</th>
+                            <th data-field="name" class="searched-sortable">Payer Name</th>
+                            <th data-field="payer_type" class="searched-sortable">Type</th>
                             <th>Notes</th>
                             <th>Date Searched</th>
                         </tr>
@@ -930,6 +930,7 @@
     <script>
         // State
         let currentSort = { field: 'name', dir: 'asc' };
+        let searchedSort = { field: 'name', dir: 'asc' };
         let currentPage = 1;
         let searchedPage = 1;
 
@@ -948,6 +949,7 @@
                     document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
 
                     if (tab.dataset.tab === 'searched') {
+                        updateSearchedSortIndicators();
                         loadSearchedPayers(1);
                     }
                 });
@@ -971,6 +973,20 @@
             document.getElementById('nameInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') loadPayers(1);
             });
+
+            // Sortable headers for Searched Payers tab (Name + Type only)
+            document.querySelectorAll('th.searched-sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const field = th.dataset.field;
+                    if (searchedSort.field === field) {
+                        searchedSort.dir = searchedSort.dir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        searchedSort = { field, dir: 'asc' };
+                    }
+                    updateSearchedSortIndicators();
+                    loadSearchedPayers(1);
+                });
+            });
         });
 
         function updateSortIndicators() {
@@ -978,6 +994,15 @@
                 th.classList.remove('sorted-asc', 'sorted-desc');
                 if (th.dataset.field === currentSort.field) {
                     th.classList.add('sorted-' + currentSort.dir);
+                }
+            });
+        }
+
+        function updateSearchedSortIndicators() {
+            document.querySelectorAll('th.searched-sortable').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.field === searchedSort.field) {
+                    th.classList.add('sorted-' + searchedSort.dir);
                 }
             });
         }
@@ -1159,7 +1184,12 @@
 
         async function loadSearchedPayers(page = 1) {
             searchedPage = page;
-            const params = new URLSearchParams({ page, per_page: 50 });
+            const params = new URLSearchParams({
+                page,
+                per_page: 50,
+                sort_by: searchedSort.field,
+                sort_dir: searchedSort.dir
+            });
 
             const data = await fetch(`/api/searched-payers?${params}`).then(r => r.json());
 
