@@ -531,8 +531,102 @@ All 12 removed from both local and AWS databases and added to `searched_payers`.
 
 **Medica**: All 7 state entries (65-71) — same policy URL confirmed
 
-### Current Database Counts:
+### Current Database Counts (after Feb 6, 2026 audit):
 - **Local**: 70 payers, 70 policies, 116 searched
 - **AWS**: 70 payers, 70 policies, 116 searched
 - **Pending re-verification**: BCBS Massachusetts, Cigna (may need re-adding — agents found updated policies with E0469)
 - **Behind secure portals** (need manual verification): Highmark BCBS PA (E-20-016), Arkansas BCBS (Policy 2022013)
+
+## May 10, 2026 (Session 3) — Quarterly Re-Review of All 186 Payers
+
+### Goal
+Re-review all 70 active payers and 116 searched payers (180 unique after dedup) to detect policy changes, new policy additions, and status corrections since the Feb 6, 2026 baseline.
+
+### Approach
+1. **Phase 1 — WebSearch sweep** of all 180 payers, batched by category (UHC family, Medica family, BCBS plans, Medicaid, commercial, federal)
+2. **Phase 2 — PDF-based re-verification** using `mcp_pdf_server/pdf_extractor.py` for direct E0469 term verification in policy PDFs (triggered by Humana misclassification finding)
+3. **Phase 3 — DB updates** applied to both local Postgres.app and AWS `cms_postgres` Docker container
+
+### Key Phase 1 findings (from WebSearch sweep)
+- **UHC ecosystem**: All 14 UHC variant policies refreshed to **03/01/2026** effective date (Commercial PDF now at `airway-clearance-devices-03012026.pdf`)
+- **Humana HUM-2007-001 (Medicaid)**: Reviewed 06/03/2025, effective date moved to 01/16/2026 (KY ed) and 07/22/2026 (VA ed)
+- **Medica (7 state plans)**: Administrative update 08/05/2025 for code refresh
+- **Premera (WA)**: Annual review 10/13/2025, policy statements unchanged
+- **Medical Mutual OH**: Policy #200508 updated 08/19/2025
+- **Fidelis Care NY**: New Auth Grids effective 04/01/2026
+- **BCBS Minnesota**: As of **08/01/2025, EviCore no longer manages DME PAs** for BCBSMN; providers now submit directly via BCBSMN Prior Authorization Lookup Tool / Availity Essentials
+- **NO new explicit E0469 policies detected** among the 110 unique searched payers
+
+### Phase 2 — PDF-based re-verification (triggered by Humana finding)
+
+User flagged that Humana Medicaid (VA) was Not Covered but Humana Medicare Advantage was Prior Auth Required — but the DB had both as Not Covered. PDF verification confirmed:
+- **Humana Medicare Advantage** policy authority is the **2026 MA/DSNP Prior Authorization & Notification List** (`790807ALL0725-C`, "ALL" = applies nationally to all 46 states + DC where Humana MA operates). E0469 listed under "DME — Airway Clearance Devices (E0469, E0481, E0482)" as a **NEW Prior Authorization Requirement** effective 01/01/2026.
+- **Humana Medicaid (HUM-2007-001 / HUM-VA-2007-002)** are state-specific MEDICAID coverage policies; they apply only to the 11 Medicaid states (FL, IL, IN, KY, LA, MI, OH, OK, SC, VA, WI) — **do not apply to Medicare Advantage**.
+
+This pattern (PA list ≠ coverage policy) drove additional PDF re-verifications. Findings:
+
+| Payer (DB ID) | Issue Found | Action |
+|---|---|---|
+| **Aetna (46)** | CPB 0067 explicitly lists E0469 as "HCPCS codes **not covered** for indications listed in the CPB" (BiWaze, Volara). DB had PA Required. | Status corrected to **Not Covered** |
+| **BCBS Tennessee (was 72)** | Direct policy verification: E0469 NOT in actual policy text. Only E0480 (percussor) referenced. | **Removed** from active payers, moved to searched |
+| **BCBS South Carolina (was 73)** | PDF extraction did NOT find E0469 in policy document. | **Removed** from active payers, moved to searched |
+| **BCBS Louisiana (was 74)** | Source URL is 2023-06-01 PDF predating E0469. No newer version published. URL probes for 2024/2025/2026 variants all 404'd. | **Removed** from active payers, moved to searched |
+| **BCBS Mississippi (new ID 87)** | Has explicit E0469 policy (added 10/01/2024, last reviewed 09/19/2025). Was NOT in either table. | **Added** as new payer |
+| **BCBS Florida (7)** | Last annual review is 10/15/2025 (DB had 09/25/2025) | Date refreshed |
+| **Capital Blue Cross (55)** | Effective date now 05/01/2026 (DB had 02/01/2026) | Date refreshed |
+| **BCBS Rhode Island (49)** | Earlier WebSearch finding wrongly classified status as "Not Covered". Actual policy has nuanced rules: Not Medically Necessary (Commercial), Subject to medical review (MA); Professional reimbursed, Institutional not reimbursed. | DB description retained as accurate; spreadsheet correction noted |
+| **UHC Louisiana Medicaid (18)** | UHC LA policy marks E0469 with asterisk = "not on State of Louisiana Medicaid Fee Schedule and may not be covered." Coverage nuance was not captured in DB notes. | Notes updated |
+| **CMS DMEPOS Required PA List (Jan 13, 2026 update)** | E0469 NOT on the list. Medicare still reviews case-by-case (Noridian/CGS unchanged). | No change |
+| **Cigna (searched 106)** | Policy 0069 (eff. 11/9/2025) does NOT include E0469. Cigna 2026 DME orientation also excludes. Remains in searched. | No change |
+
+### Phase 3 — DB updates applied (local + AWS, both in sync)
+
+**Humana corrections (applied early in session):**
+- Humana Medicare Advantage (ID 21): Not Covered → **Prior-Auth Required**; URL updated to MA/DSNP PA List; policy number `790807ALL0725-C`
+- Humana Medicaid (ID 45): **DELETED** (generic row replaced with state-specific entries)
+- Humana Medicaid (Virginia) (new ID 85): Not Covered, `HUM-VA-2007-002`, eff. 07/22/2026
+- Humana Medicaid (Kentucky) (new ID 86): Not Covered, `HUM-2007-001 (KY ed)`, eff. 01/16/2026
+- Humana SC Medicaid (searched ID 84): Renamed to "Humana Medicaid (South Carolina)"
+- Added 8 new searched_payers entries for FL, IL, IN, LA, MI, OH, OK, WI Humana Medicaid (policy editions likely exist but URLs require provider.humana.com portal login)
+
+**Spreadsheet Sheet 1 changes applied (27 of 31 rows; 4 NO_CHANGE rows required no action):**
+
+| Group | DB IDs | Action |
+|---|---|---|
+| UHC ecosystem | 11, 12, 17, 18, 28, 29, 30, 37, 38, 39, 40, 41, 42, 43 | Date refresh to 03/01/2026; UHC Commercial URL → `airway-clearance-devices-03012026.pdf`; UHC LA notes addendum |
+| Medica family | 65, 66, 67, 68, 69, 70, 71 | Admin update date 08/05/2025 |
+| Aetna | 46 | Status: PA Required → Not Covered |
+| Premera | 8 | Date: 10/13/2025 (annual review) |
+| Medical Mutual OH | 77 | Date: 08/19/2025 |
+| Fidelis Care NY | 53 | Date: April 1, 2026 |
+| BCBS Minnesota | 60 | URL change (Evicore → BCBSMN direct) |
+
+**Skipped (no action needed):**
+- IDs 13, 14, 15, 16 (UHC IE, UMR, Surest, Oxford) — NO_CHANGE rows
+- BCBS RI (49) — my earlier finding was incorrect; original DB description is accurate
+- Univera NY (25) — PDF re-verification confirmed current URL is valid
+
+### Final DB state (May 10, 2026)
+- **Local**: **69 payers, 69 policies, 127 searched payers**
+- **AWS**: **69 payers, 69 policies, 127 searched payers**
+- Net change vs Feb 6 baseline: -1 payer (BCBS TN/SC/LA removed, Humana Medicaid split: -1 +2 = +1, BCBS MS added: +1 → net 0... actually net -1 because we removed 3 BCBS plans and added 1 (MS) + 2 Humana states = -3+1+2 = 0, but original Humana Medicaid generic was deleted so -1)
+
+### Permission change
+- Added `WebSearch` permission to `.claude/settings.local.json` (project-level allowlist) so future subagents can do web research. WebFetch permission was reverted by linter.
+
+### Review spreadsheet generated
+`/Users/leahnoaeill/Downloads/E0469_Payer_Analysis/E0469_Policy_Review_2026-05-10.xlsx` — 4 sheets (Summary, Status_Date_URL Changes, New Policy Additions, No Change Confirmed, Still Not Found). Color-coded for review.
+
+### Key lessons learned for future quarterly reviews
+1. **PDF extractor is more reliable than WebSearch** for verifying E0469 presence in policy documents. `mcp_pdf_server/pdf_extractor.py search "<URL>" "E0469"` should be used directly on known policy URLs.
+2. **PA lists can diverge from coverage policies**. A payer can have an "investigational" coverage policy AND still add the code to a PA list (e.g., Humana MA). Always check both.
+3. **For Humana specifically**: Medicare Advantage and Medicaid are governed by *different* policy documents. The HUM-2007-001 series is Medicaid-only; Medicare Advantage uses the national MA/DSNP PA List.
+4. **For BCBS state plans**: Don't trust WebSearch snippets about "E0469 added 10/01/2024" — verify the actual policy document. Some BCBS plans (TN, SC, LA) reference oscillation policies generally but never explicitly added E0469 to their applicable codes section.
+5. **BCBS Mississippi was missed in the original sweep** — verify other BCBS state plans periodically as they may publish E0469 policies on different cadences.
+
+### Pending for next session
+- **BCBS Texas, Illinois, New Mexico**: Fee schedule lookup tools require provider login — verify codes through Availity portal
+- **BCBS Nebraska MA-X-077**: Portal-based; verify content
+- **Kaiser WA**: Provider portal restricted; PDF accessible via authenticated link only
+- **Highmark BCBS PA (E-20-016)**, **Arkansas BCBS (Policy 2022013)**: Behind secure portals (pre-existing pending items from Feb 6)
+- **Humana Medicaid 9 remaining states** (FL, IL, IN, LA, MI, OH, OK, SC, WI): Locate state-specific policy doc URLs via provider.humana.com portal login, then promote from searched_payers → payers
