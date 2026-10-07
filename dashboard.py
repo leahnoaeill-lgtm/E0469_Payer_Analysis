@@ -61,61 +61,22 @@ def get_db_connection():
     return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
 
 
-# Simplified coverage status categories (3 options)
+# Coverage status = the payer's determination for E0469 (one value per policy).
+# Ordered most favorable -> least favorable; colors are the badge backgrounds.
 COVERAGE_CATEGORIES = {
-    "Covered": "#C6EFCE",          # Green
-    "Not Covered": "#FFC7CE",       # Red
-    "Prior-Auth Required": "#BDD7EE"  # Blue
+    "Covered": "#C6EFCE",                    # Green - includes codes on a PA list / fee schedule
+    "Not Medically Necessary": "#FCD5B4",    # Orange
+    "Investigational": "#FFEB9C",            # Yellow
+    "Not Covered": "#FFC7CE",                # Red - only when the policy explicitly says so
 }
+COVERAGE_STATUSES = list(COVERAGE_CATEGORIES)
 
-# Map detailed statuses to simplified categories
-def normalize_coverage_status(status):
-    """Convert detailed coverage status to one of 3 simplified categories."""
-    if not status:
-        return "Prior-Auth Required"
+# Prior auth is tracked separately: "Yes" only when a document explicitly requires it.
+PRIOR_AUTH_VALUES = ["Yes", "No", "Not Applicable", "Not Stated"]
 
-    status_lower = status.lower()
-
-    # Not Covered
-    if 'not covered' in status_lower or 'non-reimbursable' in status_lower:
-        return "Not Covered"
-
-    # Covered (explicit coverage)
-    if status_lower.startswith('covered'):
-        return "Covered"
-
-    # Everything else maps to Prior-Auth Required:
-    # - Investigational, Partial, Case-by-Case, Prior Auth, Varies, Reference
-    return "Prior-Auth Required"
-
-# Legacy color mapping (for raw status display)
-COVERAGE_COLORS = {
-    "NOT COVERED": "#FFC7CE",
-    "NOT COVERED - Experimental/Investigational": "#FFC7CE",
-    "NOT COVERED - EIU Non-Reimbursable": "#FFC7CE",
-    "Investigational": "#BDD7EE",
-    "Investigational - Experimental": "#BDD7EE",
-    "Partial - OLE Unproven": "#BDD7EE",
-    "Partial - Limited Conditions": "#BDD7EE",
-    "Partial - Some Investigational": "#BDD7EE",
-    "Case-by-Case (No LCD)": "#BDD7EE",
-    "Case Review - Prior Auth Needed": "#BDD7EE",
-    "Prior Auth Required": "#BDD7EE",
-    "Prior Auth Required (MA)": "#BDD7EE",
-    "Prior Auth Required - Clinical Review": "#BDD7EE",
-    "Covered with Criteria": "#C6EFCE",
-    "Covered with Prior Auth": "#C6EFCE",
-    "Covered with Limits": "#C6EFCE",
-    "Covered - Fee Schedule": "#C6EFCE",
-    "Covered - Per Fee Schedule": "#C6EFCE",
-    "Covered - Rental Only": "#C6EFCE",
-    "Varies - EIU or Clinical Review": "#BDD7EE",
-    "Reference Only": "#BDD7EE",
-    # Simplified categories
-    "Covered": "#C6EFCE",
-    "Not Covered": "#FFC7CE",
-    "Prior-Auth Required": "#BDD7EE",
-}
+# Heatmap: a state's single color when it has mixed statuses (most restrictive wins)
+STATUS_SEVERITY = ["Not Covered", "Investigational", "Not Medically Necessary",
+                   "Covered"]
 
 
 @app.route('/')
@@ -178,17 +139,8 @@ def get_state_coverage():
     for state, data in state_data.items():
         statuses = data['statuses']
 
-        # Determine primary status for color (most common, or mixed if tied)
-        if len(statuses) == 1:
-            primary_status = list(statuses.keys())[0]
-        else:
-            # If mixed, use priority: Not Covered > Prior-Auth > Covered (show worst case)
-            if 'Not Covered' in statuses:
-                primary_status = 'Not Covered'
-            elif 'Prior-Auth Required' in statuses:
-                primary_status = 'Prior-Auth Required'
-            else:
-                primary_status = 'Covered'
+        # Primary status for color: most restrictive status present in the state
+        primary_status = next((s for s in STATUS_SEVERITY if s in statuses), list(statuses)[0])
 
         result.append({
             'state': state,
@@ -209,7 +161,7 @@ def get_payers():
     name = request.args.get('name', '').strip()
     payer_type = request.args.get('payer_type', '').strip()
     coverage_status = request.args.get('coverage_status', '').strip()
-    investigational = request.args.get('investigational', '').strip()
+    prior_auth = request.args.get('prior_auth', '').strip()
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 50))
     sort_by = request.args.get('sort_by', 'name').strip()
@@ -217,7 +169,7 @@ def get_payers():
 
     # Validate sort parameters
     allowed_sort_fields = ['name', 'payer_type', 'state', 'coverage_status', 'prior_auth_required',
-                           'investigational', 'policy_date', 'policy_number']
+                           'policy_date', 'policy_number']
     if sort_by not in allowed_sort_fields:
         sort_by = 'name'
     if sort_dir not in ['asc', 'desc']:
@@ -236,17 +188,12 @@ def get_payers():
         params.append(payer_type)
 
     if coverage_status:
-        # Filter by coverage status (already normalized to 3 categories in DB)
         where_clauses.append("pp.coverage_status = %s")
         params.append(coverage_status)
 
-    if investigational:
-        if investigational == 'Yes':
-            where_clauses.append("(pp.investigational LIKE %s OR pp.investigational = %s)")
-            params.extend(['Yes%', 'Yes'])
-        elif investigational == 'No':
-            where_clauses.append("(pp.investigational = %s OR pp.investigational = %s)")
-            params.extend(['No', 'No Determination'])
+    if prior_auth:
+        where_clauses.append("pp.prior_auth_required = %s")
+        params.append(prior_auth)
 
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
@@ -274,8 +221,7 @@ def get_payers():
             p.state,
             pp.coverage_status,
             pp.prior_auth_required,
-            pp.investigational,
-            pp.not_med_necessary,
+            pp.policy_wording,
             pp.policy_date,
             pp.policy_number,
             pp.notes,
@@ -289,7 +235,6 @@ def get_payers():
 
     payers = [dict(row) for row in cur.fetchall()]
 
-    # Add color codes (coverage_status is already normalized in DB)
     for payer in payers:
         payer['coverage_category'] = payer['coverage_status']
         payer['color_code'] = COVERAGE_CATEGORIES.get(payer['coverage_status'], '#E2E8F0')
@@ -316,10 +261,10 @@ def get_payer(payer_id):
             p.id,
             p.name,
             p.payer_type,
+            p.state,
             pp.coverage_status,
             pp.prior_auth_required,
-            pp.investigational,
-            pp.not_med_necessary,
+            pp.policy_wording,
             pp.policy_date,
             pp.policy_number,
             pp.notes,
@@ -361,9 +306,9 @@ def update_payer(payer_id):
         update_fields.append("prior_auth_required = %s")
         params.append(data['prior_auth_required'])
 
-    if 'investigational' in data:
-        update_fields.append("investigational = %s")
-        params.append(data['investigational'])
+    if 'policy_wording' in data:
+        update_fields.append("policy_wording = %s")
+        params.append(data['policy_wording'])
 
     if 'notes' in data:
         update_fields.append("notes = %s")
@@ -385,9 +330,11 @@ def update_payer(payer_id):
 
 @app.route('/api/coverage-statuses')
 def get_coverage_statuses():
-    """Get the 3 simplified coverage categories."""
-    # Return only the 3 simplified categories
-    return jsonify(["Covered", "Prior-Auth Required", "Not Covered"])
+    """Get the coverage status values (with colors) and prior auth values."""
+    return jsonify({
+        'statuses': [{'name': s, 'color': COVERAGE_CATEGORIES[s]} for s in COVERAGE_STATUSES],
+        'prior_auth': PRIOR_AUTH_VALUES
+    })
 
 
 @app.route('/api/payer-types')
@@ -441,44 +388,37 @@ def get_aggregates():
     """)
     type_counts = [dict(row) for row in cur.fetchall()]
 
-    # Investigational status
+    # Coverage status x prior auth (for summary chart, PA chart and matrix)
     cur.execute("""
-        SELECT
-            CASE
-                WHEN investigational LIKE 'Yes%' OR investigational = 'Yes' THEN 'Investigational'
-                WHEN investigational = 'No' OR investigational = 'No Determination' THEN 'Not Investigational'
-                ELSE 'Not Specified'
-            END as status,
-            COUNT(*) as count
+        SELECT coverage_status, prior_auth_required, COUNT(*) as count
         FROM payer_policies
-        GROUP BY status
-        ORDER BY count DESC
+        GROUP BY coverage_status, prior_auth_required
     """)
-    investigational_counts = [dict(row) for row in cur.fetchall()]
-
-    # Coverage summary (coverage_status is already normalized to 3 categories)
-    cur.execute("""
-        SELECT coverage_status as category, COUNT(*) as count
-        FROM payer_policies
-        GROUP BY coverage_status
-        ORDER BY
-            CASE coverage_status
-                WHEN 'Covered' THEN 1
-                WHEN 'Prior-Auth Required' THEN 2
-                WHEN 'Not Covered' THEN 3
-            END
-    """)
-    summary_counts = [dict(row) for row in cur.fetchall()]
+    pairs = cur.fetchall()
 
     conn.close()
+
+    status_totals = {s: 0 for s in COVERAGE_STATUSES}
+    pa_totals = {v: 0 for v in PRIOR_AUTH_VALUES}
+    matrix = {s: {v: 0 for v in PRIOR_AUTH_VALUES} for s in COVERAGE_STATUSES}
+    for row in pairs:
+        status, pa, count = row['coverage_status'], row['prior_auth_required'], row['count']
+        status_totals[status] = status_totals.get(status, 0) + count
+        pa_totals[pa] = pa_totals.get(pa, 0) + count
+        matrix.setdefault(status, {}).setdefault(pa, 0)
+        matrix[status][pa] += count
 
     return jsonify({
         'total_payers': total_payers,
         'total_searched': total_searched,
         'coverage_counts': coverage_counts,
         'type_counts': type_counts,
-        'investigational_counts': investigational_counts,
-        'summary_counts': summary_counts
+        'summary_counts': [{'category': s, 'count': c, 'color': COVERAGE_CATEGORIES.get(s, '#E2E8F0')}
+                           for s, c in status_totals.items()],
+        'prior_auth_counts': [{'value': v, 'count': c} for v, c in pa_totals.items()],
+        'matrix': [{'status': s, 'color': COVERAGE_CATEGORIES.get(s, '#E2E8F0'), 'cells': cells}
+                   for s, cells in matrix.items()],
+        'prior_auth_values': PRIOR_AUTH_VALUES
     })
 
 
@@ -541,6 +481,7 @@ def export_excel():
     name = request.args.get('name', '').strip()
     payer_type = request.args.get('payer_type', '').strip()
     coverage_status = request.args.get('coverage_status', '').strip()
+    prior_auth = request.args.get('prior_auth', '').strip()
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -561,6 +502,10 @@ def export_excel():
         where_clauses.append("pp.coverage_status = %s")
         params.append(coverage_status)
 
+    if prior_auth:
+        where_clauses.append("pp.prior_auth_required = %s")
+        params.append(prior_auth)
+
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
     # Get payers with policies
@@ -568,10 +513,10 @@ def export_excel():
         SELECT
             p.name,
             p.payer_type,
+            p.state,
             pp.coverage_status,
             pp.prior_auth_required,
-            pp.investigational,
-            pp.not_med_necessary,
+            pp.policy_wording,
             pp.policy_date,
             pp.policy_number,
             pp.notes,
@@ -609,9 +554,8 @@ def export_excel():
     ws1 = wb.active
     ws1.title = "E0469 Payer Policies"
 
-    headers1 = ["Payer Name", "Payer Type", "Coverage Status", "Prior Auth Required",
-                "Investigational", "Not Med Necessary", "Policy Date", "Policy Number",
-                "Notes", "Source URL"]
+    headers1 = ["Payer Name", "Payer Type", "State", "Coverage Status", "Prior Auth",
+                "Policy Wording", "Policy Date", "Policy Number", "Notes", "Source URL"]
 
     for col, header in enumerate(headers1, 1):
         cell = ws1.cell(row=1, column=col, value=header)
@@ -623,14 +567,14 @@ def export_excel():
     for row_num, payer in enumerate(payers, 2):
         ws1.cell(row=row_num, column=1, value=payer['name'])
         ws1.cell(row=row_num, column=2, value=payer['payer_type'])
+        ws1.cell(row=row_num, column=3, value=payer['state'])
 
-        coverage_cell = ws1.cell(row=row_num, column=3, value=payer['coverage_status'])
-        color = COVERAGE_COLORS.get(payer['coverage_status'], '#E2E8F0').replace('#', '')
+        coverage_cell = ws1.cell(row=row_num, column=4, value=payer['coverage_status'])
+        color = COVERAGE_CATEGORIES.get(payer['coverage_status'], '#E2E8F0').replace('#', '')
         coverage_cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
 
-        ws1.cell(row=row_num, column=4, value=payer['prior_auth_required'])
-        ws1.cell(row=row_num, column=5, value=payer['investigational'])
-        ws1.cell(row=row_num, column=6, value=payer['not_med_necessary'])
+        ws1.cell(row=row_num, column=5, value=payer['prior_auth_required'])
+        ws1.cell(row=row_num, column=6, value=payer['policy_wording'])
         ws1.cell(row=row_num, column=7, value=payer['policy_date'])
         ws1.cell(row=row_num, column=8, value=payer['policy_number'])
         ws1.cell(row=row_num, column=9, value=payer['notes'])
@@ -641,7 +585,7 @@ def export_excel():
             ws1.cell(row=row_num, column=col).alignment = Alignment(vertical='top', wrap_text=True)
 
     # Set column widths
-    widths1 = [35, 18, 30, 20, 20, 20, 15, 25, 60, 50]
+    widths1 = [35, 18, 8, 26, 16, 70, 18, 25, 60, 50]
     for col, width in enumerate(widths1, 1):
         ws1.column_dimensions[get_column_letter(col)].width = width
 
@@ -748,14 +692,14 @@ def add_payer():
             cur.execute("""
                 INSERT INTO payer_policies (
                     payer_id, coverage_status, prior_auth_required,
-                    investigational, policy_date, policy_number,
+                    policy_wording, policy_date, policy_number,
                     notes, source_url
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 payer_id,
                 data.get('coverage_status', ''),
                 data.get('prior_auth_required', ''),
-                data.get('investigational', ''),
+                data.get('policy_wording', ''),
                 data.get('policy_date', ''),
                 data.get('policy_number', ''),
                 data.get('notes', ''),

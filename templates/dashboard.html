@@ -104,10 +104,44 @@
             color: #1a365d;
         }
 
+        .stat-card { border-top: 4px solid transparent; }
+        .stat-card.covered { border-top-color: #059669; }
         .stat-card.covered .value { color: #059669; }
-        .stat-card.not-covered .value { color: #dc2626; }
+        .stat-card.pa-no-policy { border-top-color: #2563eb; }
+        .stat-card.pa-no-policy .value { color: #2563eb; }
+        .stat-card.not-med-necessary { border-top-color: #ea580c; }
+        .stat-card.not-med-necessary .value { color: #ea580c; }
+        .stat-card.investigational { border-top-color: #d97706; }
         .stat-card.investigational .value { color: #d97706; }
-        .stat-card.case-by-case .value { color: #2563eb; }
+        .stat-card.not-covered { border-top-color: #dc2626; }
+        .stat-card.not-covered .value { color: #dc2626; }
+        .stat-card.prior-auth { border-top-color: #0f766e; background: #f0fdfa; }
+        .stat-card.prior-auth .value { color: #0f766e; }
+        .stat-card .sub { font-size: 0.8em; color: #64748b; margin-top: 2px; }
+
+        /* Coverage status x prior auth matrix */
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        .matrix-table th { cursor: default; text-transform: none; letter-spacing: 0; font-size: 0.85em; text-align: center; }
+        .matrix-table th:first-child { text-align: left; }
+        .matrix-table td { text-align: center; padding: 8px 10px; }
+        .matrix-table td:first-child { text-align: left; }
+        .matrix-table td.cell-zero { color: #cbd5e1; }
+        .matrix-table td.cell-link { font-weight: 600; color: #1a365d; cursor: pointer; }
+        .matrix-table td.cell-link:hover { background: #e0f2fe; }
+        .matrix-table tr.total-row td { font-weight: 600; border-top: 2px solid #e2e8f0; }
+        .chart-card.wide { grid-column: 1 / -1; }
+        .chart-note { font-size: 0.8em; color: #64748b; margin-top: 10px; }
+
+        /* Prior auth badge */
+        .pa-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 600; white-space: nowrap; }
+        .pa-yes { background: #ccfbf1; color: #0f766e; }
+        .pa-no { background: #f1f5f9; color: #475569; }
+        .pa-na { background: #f1f5f9; color: #64748b; }
+        .pa-not-stated { background: transparent; color: #94a3b8; font-weight: 500; }
+
+        .wording-cell { max-width: 340px; font-size: 0.85em; color: #334155; font-style: italic; }
+        .wording-cell .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .wording-cell:hover .clamp { -webkit-line-clamp: unset; }
 
         /* Search Form */
         .search-section {
@@ -380,9 +414,12 @@
         .bar.covered { background: #059669; }
         .bar.not-covered { background: #dc2626; }
         .bar.investigational { background: #d97706; }
-        .bar.case-by-case { background: #2563eb; }
+        .bar.not-med-necessary { background: #ea580c; }
+        .bar.pa-no-policy { background: #2563eb; }
+        .bar.prior-auth { background: #0f766e; }
         .bar.partial { background: #eab308; }
         .bar.other { background: #64748b; }
+        .bar-label { width: 170px; }
 
         /* Notes cell */
         .notes-cell {
@@ -734,31 +771,20 @@
                     <input type="text" class="search-input" id="newPayerState" placeholder="e.g., CA (2-letter code, leave blank for national)" maxlength="2" style="text-transform: uppercase;">
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
-                    <label>Coverage Status</label>
+                    <label>Coverage Status (the payer's determination for E0469)</label>
                     <select class="search-input" id="newCoverageStatus">
                         <option value="">Select status...</option>
-                        <option value="Covered">Covered</option>
-                        <option value="Not Covered">Not Covered</option>
-                        <option value="Prior-Auth Required">Prior-Auth Required</option>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
-                    <label>Prior Auth Required</label>
+                    <label>Prior Auth ("Yes" only when a document explicitly requires it)</label>
                     <select class="search-input" id="newPriorAuth">
                         <option value="">Select...</option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                        <option value="Not Specified">Not Specified</option>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
-                    <label>Investigational</label>
-                    <select class="search-input" id="newInvestigational">
-                        <option value="">Select...</option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                        <option value="Not Specified">Not Specified</option>
-                    </select>
+                    <label>Policy Wording (exact quote)</label>
+                    <textarea class="search-input" id="newPolicyWording" rows="3" placeholder='e.g., "OLE devices ... are considered investigational."'></textarea>
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
                     <label>Policy Date</label>
@@ -800,33 +826,33 @@
                     <h3>Total Payers</h3>
                     <div class="value" id="statTotal">--</div>
                 </div>
-                <div class="stat-card covered">
-                    <h3>Covered</h3>
-                    <div class="value" id="statCovered">--</div>
-                </div>
-                <div class="stat-card case-by-case">
-                    <h3>Prior-Auth Required</h3>
-                    <div class="value" id="statPriorAuth">--</div>
-                </div>
-                <div class="stat-card investigational">
-                    <h3>Investigational</h3>
-                    <div class="value" id="statInvestigational">--</div>
-                </div>
-                <div class="stat-card not-covered">
-                    <h3>Not Covered</h3>
-                    <div class="value" id="statNotCovered">--</div>
+                <!-- One card per coverage status, rendered from /api/aggregates -->
+                <div id="statusCards" style="display: contents;"></div>
+                <div class="stat-card prior-auth">
+                    <h3>Prior Auth: Yes</h3>
+                    <div class="value" id="statPriorAuthYes">--</div>
+                    <div class="sub">explicitly required</div>
                 </div>
             </div>
 
             <!-- Charts -->
             <div class="charts-row">
                 <div class="chart-card">
-                    <h3>Coverage Summary</h3>
+                    <h3>Coverage Status</h3>
                     <div class="bar-chart" id="coverageChart"></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Prior Authorization</h3>
+                    <div class="bar-chart" id="priorAuthChart"></div>
                 </div>
                 <div class="chart-card">
                     <h3>Top Payer Types</h3>
                     <div class="bar-chart" id="typeChart"></div>
+                </div>
+                <div class="chart-card wide">
+                    <h3>Coverage Status × Prior Auth</h3>
+                    <div id="matrixContainer"></div>
+                    <div class="chart-note">Click a number to filter the table below.</div>
                 </div>
             </div>
 
@@ -850,11 +876,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Investigational</label>
-                        <select id="investigationalSelect">
+                        <label>Prior Auth</label>
+                        <select id="priorAuthSelect">
                             <option value="">All</option>
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -881,14 +905,15 @@
                             <th data-field="payer_type" class="sortable">Type</th>
                             <th data-field="state" class="sortable">State</th>
                             <th data-field="coverage_status" class="sortable">Coverage Status</th>
-                            <th data-field="investigational" class="sortable">Investigational</th>
+                            <th data-field="prior_auth_required" class="sortable">Prior Auth</th>
+                            <th>Policy Wording</th>
                             <th data-field="policy_date" class="sortable">Policy Date</th>
                             <th>Notes</th>
                             <th>Source</th>
                         </tr>
                     </thead>
                     <tbody id="payersTable">
-                        <tr><td colspan="8" class="loading">Loading...</td></tr>
+                        <tr><td colspan="9" class="loading">Loading...</td></tr>
                     </tbody>
                 </table>
                 <div class="pagination" id="pagination"></div>
@@ -1015,13 +1040,30 @@
                 typeSelect.innerHTML += `<option value="${type}">${type}</option>`;
             });
 
-            // Load coverage statuses
-            const statuses = await fetch('/api/coverage-statuses').then(r => r.json());
+            // Load coverage statuses and prior auth values
+            const lookups = await fetch('/api/coverage-statuses').then(r => r.json());
             const coverageSelect = document.getElementById('coverageSelect');
-            statuses.forEach(status => {
-                coverageSelect.innerHTML += `<option value="${status}">${status}</option>`;
+            const newCoverageStatus = document.getElementById('newCoverageStatus');
+            lookups.statuses.forEach(s => {
+                coverageSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+                newCoverageStatus.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+            });
+            const priorAuthSelect = document.getElementById('priorAuthSelect');
+            const newPriorAuth = document.getElementById('newPriorAuth');
+            lookups.prior_auth.forEach(v => {
+                priorAuthSelect.innerHTML += `<option value="${v}">${v}</option>`;
+                newPriorAuth.innerHTML += `<option value="${v}">${v}</option>`;
             });
         }
+
+        // CSS class per coverage status (stat cards and bars)
+        const STATUS_CLASS = {
+            'Covered': 'covered',
+            'Not Medically Necessary': 'not-med-necessary',
+            'Investigational': 'investigational',
+            'Not Covered': 'not-covered'
+        };
+        const PA_CLASS = { 'Yes': 'pa-yes', 'No': 'pa-no', 'Not Applicable': 'pa-na', 'Not Stated': 'pa-not-stated' };
 
         async function loadAggregates() {
             const data = await fetch('/api/aggregates').then(r => r.json());
@@ -1029,58 +1071,82 @@
             document.getElementById('statTotal').textContent = data.total_payers;
             document.getElementById('statSearched').textContent = data.total_searched;
 
-            // Calculate summary stats for 3 categories
-            let covered = 0, notCovered = 0, priorAuth = 0;
-            data.summary_counts.forEach(item => {
-                if (item.category === 'Covered') covered = item.count;
-                else if (item.category === 'Not Covered') notCovered = item.count;
-                else if (item.category === 'Prior-Auth Required') priorAuth = item.count;
-            });
+            document.getElementById('statusCards').innerHTML = data.summary_counts.map(item => `
+                <div class="stat-card ${STATUS_CLASS[item.category] || ''}" style="cursor:pointer"
+                     onclick="filterTable('${item.category}', '')" title="Show these payers">
+                    <h3>${escapeHtml(item.category)}</h3>
+                    <div class="value">${item.count}</div>
+                </div>
+            `).join('');
 
-            // Calculate investigational count
-            let investigational = 0;
-            data.investigational_counts.forEach(item => {
-                if (item.status === 'Investigational') investigational = item.count;
-            });
+            const paYes = data.prior_auth_counts.find(p => p.value === 'Yes');
+            document.getElementById('statPriorAuthYes').textContent = paYes ? paYes.count : 0;
 
-            document.getElementById('statCovered').textContent = covered;
-            document.getElementById('statNotCovered').textContent = notCovered;
-            document.getElementById('statPriorAuth').textContent = priorAuth;
-            document.getElementById('statInvestigational').textContent = investigational;
-
-            // Render charts - include investigational in coverage summary
-            const chartData = [...data.summary_counts];
-            if (investigational > 0) {
-                chartData.push({ category: 'Investigational', count: investigational });
-            }
-            renderCoverageChart(chartData);
+            renderCoverageChart(data.summary_counts);
+            renderPriorAuthChart(data.prior_auth_counts);
             renderTypeChart(data.type_counts);
+            renderMatrix(data.matrix, data.prior_auth_values);
         }
 
         function renderCoverageChart(data) {
-            const total = data.reduce((sum, item) => sum + item.count, 0);
-            const container = document.getElementById('coverageChart');
-            container.innerHTML = '';
-
-            const colorMap = {
-                'Covered': 'covered',
-                'Not Covered': 'not-covered',
-                'Prior-Auth Required': 'case-by-case',
-                'Investigational': 'investigational'
-            };
-
-            data.forEach(item => {
-                const pct = (item.count / total * 100).toFixed(0);
-                const barClass = colorMap[item.category] || 'other';
-                container.innerHTML += `
-                    <div class="bar-item">
-                        <div class="bar-label">${item.category}</div>
-                        <div class="bar-container">
-                            <div class="bar ${barClass}" style="width: ${Math.max(pct, 5)}%">${item.count}</div>
-                        </div>
+            const max = Math.max(...data.map(item => item.count), 1);
+            document.getElementById('coverageChart').innerHTML = data.map(item => `
+                <div class="bar-item">
+                    <div class="bar-label">${escapeHtml(item.category)}</div>
+                    <div class="bar-container">
+                        <div class="bar ${STATUS_CLASS[item.category] || 'other'}" style="width: ${Math.max(item.count / max * 100, 6)}%">${item.count}</div>
                     </div>
-                `;
+                </div>
+            `).join('');
+        }
+
+        function renderPriorAuthChart(data) {
+            const max = Math.max(...data.map(item => item.count), 1);
+            document.getElementById('priorAuthChart').innerHTML = data.map(item => `
+                <div class="bar-item">
+                    <div class="bar-label">${escapeHtml(item.value)}</div>
+                    <div class="bar-container">
+                        <div class="bar ${item.value === 'Yes' ? 'prior-auth' : 'other'}" style="width: ${Math.max(item.count / max * 100, 6)}%">${item.count}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderMatrix(matrix, paValues) {
+            const colTotals = Object.fromEntries(paValues.map(v => [v, 0]));
+            let rows = '';
+            matrix.forEach(({ status, cells }) => {
+                let rowTotal = 0;
+                const tds = paValues.map(v => {
+                    const n = cells[v] || 0;
+                    rowTotal += n; colTotals[v] += n;
+                    return n ? `<td class="cell-link" onclick="filterTable('${status}', '${v}')">${n}</td>` : `<td class="cell-zero">0</td>`;
+                }).join('');
+                rows += `<tr>
+                    <td><span class="coverage-badge badge-${STATUS_CLASS[status] || 'other'}" style="background:${statusColor(status)}">${escapeHtml(status)}</span></td>
+                    ${tds}<td><strong>${rowTotal}</strong></td></tr>`;
             });
+            const grand = Object.values(colTotals).reduce((a, b) => a + b, 0);
+            rows += `<tr class="total-row"><td>Total</td>${paValues.map(v => `<td>${colTotals[v]}</td>`).join('')}<td>${grand}</td></tr>`;
+            document.getElementById('matrixContainer').innerHTML = `
+                <table class="matrix-table">
+                    <thead><tr><th>Coverage Status</th>${paValues.map(v => `<th>Prior Auth: ${v}</th>`).join('')}<th>Total</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+        }
+
+        const STATUS_COLORS = {
+            'Covered': '#C6EFCE',
+            'Not Medically Necessary': '#FCD5B4', 'Investigational': '#FFEB9C', 'Not Covered': '#FFC7CE'
+        };
+        function statusColor(status) { return STATUS_COLORS[status] || '#E2E8F0'; }
+
+        // Set filters from a stat card or matrix cell and reload the table
+        function filterTable(status, priorAuth) {
+            document.getElementById('coverageSelect').value = status;
+            document.getElementById('priorAuthSelect').value = priorAuth;
+            loadPayers(1);
+            document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
         }
 
         function renderTypeChart(data) {
@@ -1088,7 +1154,7 @@
             const container = document.getElementById('typeChart');
             container.innerHTML = '';
 
-            const colors = ['covered', 'case-by-case', 'investigational', 'partial', 'not-covered', 'other'];
+            const colors = ['covered', 'pa-no-policy', 'investigational', 'partial', 'not-covered', 'other'];
 
             data.slice(0, 6).forEach((item, i) => {
                 const pct = (item.count / total * 100).toFixed(0);
@@ -1109,7 +1175,7 @@
                 name: document.getElementById('nameInput').value,
                 payer_type: document.getElementById('typeSelect').value,
                 coverage_status: document.getElementById('coverageSelect').value,
-                investigational: document.getElementById('investigationalSelect').value,
+                prior_auth: document.getElementById('priorAuthSelect').value,
                 page: page,
                 per_page: 50,
                 sort_by: currentSort.field,
@@ -1127,7 +1193,7 @@
             const tbody = document.getElementById('payersTable');
 
             if (payers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="loading">No payers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="loading">No payers found</td></tr>';
                 return;
             }
 
@@ -1137,7 +1203,8 @@
                     <td>${escapeHtml(p.payer_type || '')}</td>
                     <td>${escapeHtml(p.state || '')}</td>
                     <td><span class="coverage-badge" style="background: ${p.color_code}">${escapeHtml(p.coverage_category || '')}</span></td>
-                    <td>${escapeHtml(p.investigational || '')}</td>
+                    <td>${p.prior_auth_required ? `<span class="pa-badge ${PA_CLASS[p.prior_auth_required] || 'pa-not-stated'}">${escapeHtml(p.prior_auth_required)}</span>` : ''}</td>
+                    <td class="wording-cell" title="${escapeHtml(p.policy_wording || '')}"><div class="clamp">${p.policy_wording ? '“' + escapeHtml(p.policy_wording) + '”' : ''}</div></td>
                     <td>${escapeHtml(p.policy_date || '')}</td>
                     <td class="notes-cell" title="${escapeHtml(p.notes || '')}">${escapeHtml(p.notes || '')}</td>
                     <td>${p.source_url ? `<a href="${escapeHtml(p.source_url)}" target="_blank" class="source-link">View Policy</a>` : ''}</td>
@@ -1228,7 +1295,7 @@
             document.getElementById('nameInput').value = '';
             document.getElementById('typeSelect').value = '';
             document.getElementById('coverageSelect').value = '';
-            document.getElementById('investigationalSelect').value = '';
+            document.getElementById('priorAuthSelect').value = '';
             loadPayers(1);
         }
 
@@ -1236,7 +1303,8 @@
             const params = new URLSearchParams({
                 name: document.getElementById('nameInput').value,
                 payer_type: document.getElementById('typeSelect').value,
-                coverage_status: document.getElementById('coverageSelect').value
+                coverage_status: document.getElementById('coverageSelect').value,
+                prior_auth: document.getElementById('priorAuthSelect').value
             });
             window.location.href = `/api/export?${params}`;
         }
@@ -1357,7 +1425,7 @@
             document.getElementById('newPayerState').value = '';
             document.getElementById('newCoverageStatus').value = '';
             document.getElementById('newPriorAuth').value = '';
-            document.getElementById('newInvestigational').value = '';
+            document.getElementById('newPolicyWording').value = '';
             document.getElementById('newPolicyDate').value = '';
             document.getElementById('newPolicyNumber').value = '';
             document.getElementById('newSourceUrl').value = '';
@@ -1379,7 +1447,7 @@
                 state: document.getElementById('newPayerState').value.toUpperCase(),
                 coverage_status: document.getElementById('newCoverageStatus').value,
                 prior_auth_required: document.getElementById('newPriorAuth').value,
-                investigational: document.getElementById('newInvestigational').value,
+                policy_wording: document.getElementById('newPolicyWording').value,
                 policy_date: document.getElementById('newPolicyDate').value,
                 policy_number: document.getElementById('newPolicyNumber').value,
                 source_url: document.getElementById('newSourceUrl').value,

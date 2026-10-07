@@ -30,7 +30,9 @@
         .stat-box .value { font-size: 1.8em; font-weight: 700; }
         .stat-box .label { font-size: 0.85em; color: #64748b; }
         .stat-box.covered .value { color: #059669; }
-        .stat-box.prior-auth .value { color: #2563eb; }
+        .stat-box.pa-no-policy .value { color: #2563eb; }
+        .stat-box.not-med-necessary .value { color: #ea580c; }
+        .stat-box.investigational .value { color: #d97706; }
         .stat-box.not-covered .value { color: #dc2626; }
         .stat-box.no-data .value { color: #64748b; }
         .detail-panel h2 { color: #1a365d; margin-bottom: 15px; font-size: 1.2em; }
@@ -38,7 +40,9 @@
         .state-name { font-size: 1.5em; font-weight: 700; color: #1a365d; margin-bottom: 10px; }
         .status-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 600; margin-bottom: 15px; }
         .status-badge.covered { background: #C6EFCE; color: #166534; }
-        .status-badge.prior-auth { background: #BDD7EE; color: #1e40af; }
+        .status-badge.pa-no-policy { background: #BDD7EE; color: #1e40af; }
+        .status-badge.not-med-necessary { background: #FCD5B4; color: #9a3412; }
+        .status-badge.investigational { background: #FFEB9C; color: #92400e; }
         .status-badge.not-covered { background: #FFC7CE; color: #991b1b; }
         .status-badge.no-data { background: #E2E8F0; color: #64748b; }
         .payer-list { margin-top: 15px; }
@@ -61,17 +65,14 @@
 
     <div class="container">
         <div class="stats-row">
-            <div class="stat-box covered"><div class="value" id="coveredCount">-</div><div class="label">States Covered</div></div>
-            <div class="stat-box prior-auth"><div class="value" id="priorAuthCount">-</div><div class="label">States Prior-Auth</div></div>
-            <div class="stat-box not-covered"><div class="value" id="notCoveredCount">-</div><div class="label">States Not Covered</div></div>
+            <!-- One box per coverage status (states with at least one payer in that status) -->
+            <div id="statusStats" style="display: contents;"></div>
             <div class="stat-box no-data"><div class="value" id="noDataCount">-</div><div class="label">No Policy Found</div></div>
         </div>
 
         <div class="legend">
-            <div class="legend-item"><div class="legend-color" style="background: #C6EFCE;"></div><span>Covered</span></div>
-            <div class="legend-item"><div class="legend-color" style="background: #BDD7EE;"></div><span>Prior-Auth Required</span></div>
-            <div class="legend-item"><div class="legend-color" style="background: #FFC7CE;"></div><span>Not Covered</span></div>
-            <div class="legend-item"><div class="legend-color" style="background: repeating-linear-gradient(45deg, #C6EFCE, #C6EFCE 4px, #BDD7EE 4px, #BDD7EE 8px);"></div><span>Mixed (striped)</span></div>
+            <span id="statusLegend" style="display: contents;"></span>
+            <div class="legend-item"><div class="legend-color" style="background: repeating-linear-gradient(45deg, #C6EFCE, #C6EFCE 4px, #FFEB9C 4px, #FFEB9C 8px, #FFC7CE 8px, #FFC7CE 12px);"></div><span>Mixed (striped)</span></div>
             <div class="legend-item"><div class="legend-color" style="background: #E2E8F0;"></div><span>No Policy Found</span></div>
         </div>
 
@@ -79,24 +80,7 @@
             <div class="map-container">
                 <svg id="us-map">
                     <defs>
-                        <!-- Stripe patterns for mixed statuses -->
-                        <pattern id="pattern-covered-priorauth" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-                            <rect width="4" height="8" fill="#C6EFCE"/>
-                            <rect x="4" width="4" height="8" fill="#BDD7EE"/>
-                        </pattern>
-                        <pattern id="pattern-covered-notcovered" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-                            <rect width="4" height="8" fill="#C6EFCE"/>
-                            <rect x="4" width="4" height="8" fill="#FFC7CE"/>
-                        </pattern>
-                        <pattern id="pattern-priorauth-notcovered" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-                            <rect width="4" height="8" fill="#BDD7EE"/>
-                            <rect x="4" width="4" height="8" fill="#FFC7CE"/>
-                        </pattern>
-                        <pattern id="pattern-all-three" patternUnits="userSpaceOnUse" width="12" height="8" patternTransform="rotate(45)">
-                            <rect width="4" height="8" fill="#C6EFCE"/>
-                            <rect x="4" width="4" height="8" fill="#BDD7EE"/>
-                            <rect x="8" width="4" height="8" fill="#FFC7CE"/>
-                        </pattern>
+                        <!-- Stripe patterns for mixed statuses are generated in JS -->
                     </defs>
                 </svg>
             </div>
@@ -122,30 +106,34 @@
 
         let selectedState = null;
 
+        // Coverage statuses in display order, with fill colors and CSS classes
+        const STATUSES = [
+            { name: 'Covered', color: '#C6EFCE', cls: 'covered' },
+            { name: 'Not Medically Necessary', color: '#FCD5B4', cls: 'not-med-necessary' },
+            { name: 'Investigational', color: '#FFEB9C', cls: 'investigational' },
+            { name: 'Not Covered', color: '#FFC7CE', cls: 'not-covered' }
+        ];
+
+        // Single status -> solid color; mixed -> striped pattern built on demand
         function getStateFill(abbr) {
             const data = stateData[abbr];
             if (!data || !data.statuses) return '#E2E8F0'; // No policy found
 
-            const hasCovered = data.statuses['Covered'] > 0;
-            const hasPriorAuth = data.statuses['Prior-Auth Required'] > 0;
-            const hasNotCovered = data.statuses['Not Covered'] > 0;
+            const present = STATUSES.filter(s => data.statuses[s.name] > 0);
+            if (present.length === 0) return '#E2E8F0';
+            if (present.length === 1) return present[0].color;
 
-            const statusCount = (hasCovered ? 1 : 0) + (hasPriorAuth ? 1 : 0) + (hasNotCovered ? 1 : 0);
-
-            // Single status - solid color
-            if (statusCount === 1) {
-                if (hasCovered) return '#C6EFCE';
-                if (hasPriorAuth) return '#BDD7EE';
-                if (hasNotCovered) return '#FFC7CE';
+            const id = 'pattern-' + present.map(s => s.cls).join('-');
+            const defs = d3.select('#us-map defs');
+            if (defs.select('#' + id).empty()) {
+                const pattern = defs.append('pattern')
+                    .attr('id', id).attr('patternUnits', 'userSpaceOnUse')
+                    .attr('width', 4 * present.length).attr('height', 8)
+                    .attr('patternTransform', 'rotate(45)');
+                present.forEach((s, i) => pattern.append('rect')
+                    .attr('x', 4 * i).attr('width', 4).attr('height', 8).attr('fill', s.color));
             }
-
-            // Multiple statuses - use stripe pattern
-            if (statusCount === 3) return 'url(#pattern-all-three)';
-            if (hasCovered && hasPriorAuth) return 'url(#pattern-covered-priorauth)';
-            if (hasCovered && hasNotCovered) return 'url(#pattern-covered-notcovered)';
-            if (hasPriorAuth && hasNotCovered) return 'url(#pattern-priorauth-notcovered)';
-
-            return '#E2E8F0';
+            return `url(#${id})`;
         }
 
         async function loadMap() {
@@ -158,18 +146,13 @@
                 coverage.forEach(item => { stateData[item.state] = item; });
 
                 // Count states by their statuses (a state can have multiple)
-                let covered = 0, priorAuth = 0, notCovered = 0;
-                coverage.forEach(item => {
-                    if (item.statuses) {
-                        if (item.statuses['Covered']) covered++;
-                        if (item.statuses['Prior-Auth Required']) priorAuth++;
-                        if (item.statuses['Not Covered']) notCovered++;
-                    }
-                });
-
-                document.getElementById('coveredCount').textContent = covered;
-                document.getElementById('priorAuthCount').textContent = priorAuth;
-                document.getElementById('notCoveredCount').textContent = notCovered;
+                document.getElementById('statusStats').innerHTML = STATUSES.map(s => {
+                    const n = coverage.filter(item => item.statuses && item.statuses[s.name]).length;
+                    return `<div class="stat-box ${s.cls}"><div class="value">${n}</div><div class="label">States: ${s.name}</div></div>`;
+                }).join('');
+                document.getElementById('statusLegend').innerHTML = STATUSES.map(s =>
+                    `<div class="legend-item"><div class="legend-color" style="background: ${s.color};"></div><span>${s.name}</span></div>`
+                ).join('');
                 document.getElementById('noDataCount').textContent = 50 - coverage.length;
 
                 const states = topojson.feature(us, us.objects.states).features;
@@ -213,14 +196,12 @@
             }
 
             // Build status breakdown HTML
-            const statusOrder = ['Covered', 'Prior-Auth Required', 'Not Covered'];
             let statusHtml = '';
 
-            statusOrder.forEach(status => {
+            STATUSES.forEach(({ name: status, cls: statusClass }) => {
                 if (data.statuses && data.statuses[status]) {
                     const count = data.statuses[status];
                     const payers = data.payers_by_status[status] ? data.payers_by_status[status].split(', ') : [];
-                    const statusClass = status === 'Covered' ? 'covered' : status === 'Not Covered' ? 'not-covered' : 'prior-auth';
 
                     statusHtml += `
                         <div class="status-section">

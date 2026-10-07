@@ -667,3 +667,76 @@ All 90 remaining searched_payers entries now show `date_searched = 2026-05-10`. 
 - Today net removals: -4 (Humana Medicaid generic, BCBS TN, BCBS SC, BCBS LA)
 - Net: 70 (unchanged)
 - But composition is more accurate: removed 3 incorrectly-added BCBS plans, added 1 previously-missed BCBS, split 1 generic Humana row into 2 confirmed state rows.
+
+## Aug 6–7, 2026 (Session 4) — Quarterly re-review (reconstructed Oct 6, 2026)
+
+This session was not logged at the time. Reconstructed from `E0469_Policy_Review_2026-08-06.xlsx` (user decisions) and DB timestamps (single update batch at 2026-08-07 23:02, local + AWS identical).
+
+- **Review files**: `E0469_Policy_Review_2026-08-0611.xlsx` (original agent output) and `E0469_Policy_Review_2026-08-06.xlsx` (copy with user's Decision column filled in).
+- **6 payers added** (IDs 89–94): Humana Puerto Rico (PA), MVP Health Care NY/VT (PA), Priority Health MI (PA), Humana (Commercial) (Not Covered, HUM-2007-001), BCBS Michigan (PA via Northwood), Blue Shield California (PA). MVP, Priority, BCBSM, Blue Shield CA were removed from searched_payers.
+- **1 payer removed**: UnitedHealthcare Louisiana (Medicaid) — UHC LA Community Plan ended 04/01/2026; moved to searched_payers.
+- **58 policy rows updated**: mostly the `investigational` / `not_med_necessary` flags, dates and URLs (UHC family moved to `comm-medical-drug/airway-clearance-devices.pdf` and `medicaid-comm-plan/airway-clearance-devices-cs.pdf`). `coverage_status` was left as "Prior-Auth Required" for most rows — the investigational/NMN nuance lives in the flag columns.
+- **Status changes**: BCBS Texas and BCBS New Mexico → Not Covered (user-supplied EIU list URLs).
+- **Rejected removals (kept by user)**: McLaren (MI), Anthem Indiana — user noted E0469 is in policy as not medically necessary. New York Medicaid (eMedNY) kept even though the 7/1/2026 code list does not contain E0469.
+- **Skipped as duplicates**: Louisiana Blue, Excellus, EmblemHealth, ConnectiCare, FL Blue/GuideWell, Bind, Noridian JD, CMS fee schedule.
+- **Resulting counts**: 75 payers, 75 policies, 85 searched (local + AWS in sync).
+
+## Oct 6, 2026 (Session 5) — Quarterly re-review
+
+### Method
+1. Exported DB baseline (75 / 75 / 85) to scratchpad.
+2. Wrote a batch checker that fetched all 55 unique active source URLs (PDF + HTML), extracted text, counted E0469 hits, pulled date headers and E0469 context.
+3. Compared dates/wording to DB; inspected revision logs.
+4. Swept the 85 searched payers via WebSearch + direct PDF checks. New angle: **CMS-0057-F** public prior-auth lists (required from 2026) are exposing E0469 on plans that never published a coverage policy.
+
+### Output
+`E0469_Policy_Review_2026-10-06.xlsx` — sheets: Summary, Changes - Active Payers (23 rows), Wording Flags (4), New Policy Additions (10), No Change Confirmed (43), Still Not Found (85). **No DB changes applied — awaiting user decisions.**
+
+### Key findings
+- **BCBS Florida** 09/15/2026 annual review: multifunction-device statement updated (names BiWaze/BiWaze Clear); still investigational.
+- **Date refreshes**: Fidelis (10/1/2026), Moda (09/11/2026), Select Health UT/ID (09/23/26), Providence MP220 (eff 10/1/2026), Medi-Cal (Sept 2026), BCBSM PA list (Oct 2, 2026), Humana MA PAL (rev 6/1/2026), Medica x7 (eff 12/01/2025).
+- **HCSC EIU lists**: TX, NM (and OK) end-dated E0469 on 11/30/2025; **IL did not** (still non-reimbursable EIU, public URL `bcbsil.com/docs/provider/il/standards/cpcp/2026/eiu-services-code-list.pdf`). TX/NM "Not Covered" status rests on the ended entry — flagged for user.
+- **Broken URLs**: Humana KY ed `MOLET - HUM-2007-001 … KY ed 011620.26pdf` (IDs 86, 92) → 404; Capital Blue Cross commercial MP 4.002 → 404 (Capital Blue Medicare MA 4.002 eff 10/1/2026 still lists E0469).
+- **New candidates**: Louisiana Blue 00090 (eff 06/01/2026, OLE investigational), Excellus 1.01.15 (eff 3/16/2026, Volara investigational), EmblemHealth/ConnectiCare rental-only table, Centene GA/NC Medicaid + Ambetter SC (0057-F PA lists), iCare WI (PA, Medicare LOB), The Health Plan WV (E/I, new), Health Team Advantage NC (PA > $1000, new).
+- **Wording flags**: Priority Health (policy says "Non-Covered", DB = PA Required), BCBS Arkansas (policy 2022013 = "not medically necessary or investigational and are not covered", DB = PA Required).
+- **Humana state Medicaid PA lists** (FL, SC, LA, OH, OK; 2026, rev Oct 2026) do not list E0469 — consistent with OLE "no covered indications" policies.
+
+## Oct 7, 2026 (Session 5, cont.)
+
+### Applied (local + AWS, single transaction each) — now 79 payers / 79 policies / 80 searched
+- Added EmblemHealth (NY) and ConnectiCare (CT): Prior-Auth Required, PA Yes, Investigational No (user decision; source is the shared RPC20210007 rental-only table).
+- Added Excellus BCBS (NY) (1.01.15, eff 03/16/2026) and Louisiana Blue (00090, eff 06/01/2026): Investigational Yes, PA "Not Specified" (neither policy states a PA requirement).
+- Removed matching rows from searched_payers (EmblemHealth, ConnectiCare, Excellus, both Louisiana Blue rows).
+
+### Data model redesign (user-approved direction, not yet applied)
+- **Coverage Status** becomes ONE field: Covered with Criteria / Investigational / Not Medically Necessary (standalone only when the payer lists it) / Not Covered (only when explicit) / PA Required - No Policy / Case-by-Case - No Policy (proposed, for Medicare MACs + UHC NC).
+- **Prior Auth** separate: Yes (only when a document explicitly requires it) / No / Not Applicable / Not Stated.
+- **Policy Wording**: new short exact-quote field.
+- Review file: `E0469_Coverage_Status_Remap_2026-10-07.xlsx` (79 rows; 69 Approve, 10 Hold). Awaiting user approval → then add columns, apply data to local + AWS, update dashboard + Add/Edit form, deploy, retire old investigational / not_med_necessary columns.
+- Notable: Kaiser WA HFCWO criteria say BiWaze Clear/Volara are "Medicare: Considered Medically Necessary when criteria … are met; Non-Medicare: Considered not medically necessary". BCBS VT moved to `investigational-services-procedures-oct-2026`.
+
+### Coverage status redesign — LOCAL ONLY (Oct 7, 2026), awaiting user review before AWS
+- User decisions: Case-by-Case - No Policy accepted; UHC family + Aetna = Investigational; "Covered with Criteria" renamed **Covered**; Kaiser WA Non-Medicare PA = Yes; Humana Medicaid VA PA = Yes (VA Dual Fully Integrated PAL 727101VA0425); BCBS TX/NM = Not Covered (EIU lists); BCBS MN = PA Required - No Policy (portal only — public 1/5/26 PA lists don't list E0469); MN MHCP Not Covered (revised 12/17/2025); HMSA Not Covered (hmsa.com/prc/... page confirmed); Humana KY = Covered, PA Yes (KDMS MSEA fee schedule, rental only); Humana Commercial = PA Required - No Policy (Humana MA/DSNP PAL).
+- Still HOLD (proposed values applied locally, need user's source): McLaren (80), eMedNY (81), Anthem IN (82).
+- Local DB: backup table `payer_policies_backup_20261007`; new column `policy_wording`; coverage_status / prior_auth_required rewritten for all 79 rows. Migration SQL: scratchpad `migrate_coverage_status_2026-10-07.sql` (re-run on AWS after approval).
+- Result: Investigational 35, PA Required - No Policy 16, Not Covered 15, Covered 5, Not Medically Necessary 5, Case-by-Case 3. Prior Auth: Yes 19, Not Stated 48, Not Applicable 10, No 2.
+- Code on branch `coverage-status-redesign` (uncommitted): dashboard.py (6 statuses, prior_auth filter, policy_wording, status×PA matrix in /api/aggregates, export columns), templates/dashboard.html (status cards, 3 charts + matrix, Prior Auth column/filter, Policy Wording column, Add form), templates/map.html (6-status legend/stats, dynamic stripe patterns), schema.sql (policy_wording).
+- Round 2/3 (Oct 7, local only): Noridian + CGS → Covered, PA No (Medicare covers; not on CMS PA list). BCBS MN → PA via eviCore DME code list (eff 1/1/2024; note BCBSMN left eviCore 08/01/2025). UHC NC → PA Required - No Policy, PA Yes. **Case-by-Case status removed** (folded into PA Required - No Policy) — 5 statuses remain. Added **Dean Health Plan (WI)** (MP9746, eff 12/01/2025): Not Covered, PA Not Applicable.
+- Local now: 80 payers / 80 policies / 80 searched. Covered 7, PA Required - No Policy 17, Not Med Necessary 5, Investigational 35, Not Covered 16. PA: Yes 20, No 2, Not Applicable 11, Not Stated 47.
+- AWS bundle ready (scratchpad `aws_bundle_2026-10-07.sql`): backup table + policy_wording column + 79 row updates + Dean insert. AWS IDs verified aligned (max payer id 98).
+- Round 4 (Oct 7, local only; appended to AWS bundle): Providence → Not Covered (Table 1 "non-coverage position"). McLaren and Anthem IN moved to searched_payers (no E0469 document). Added Peach State Health Plan (GA Medicaid, Centene): Covered, PA Yes (CMS-0057-F PA list). Local: 79 payers / 79 policies / 82 searched. Open questions: Excellus "covers E0469" (policy 1.01.15 says Volara investigational — need user's source), eMedNY (NY Medicaid FFS claims system — move to No Policy?), Carolina Complete (same 0057-F PA list type as Peach State).
+- Round 5 (Oct 7, local; in AWS bundle): added Carolina Complete (NC Medicaid), Ambetter from Absolute Total Care (SC), iCare (WI), The Health Plan (WV), Health Team Advantage (NC) — all Covered, PA Yes per user. eMedNY moved to No Policy as "New York Medicaid (eMedNY FFS)"; iCare removed from searched. Excellus kept Investigational (user approved). All active notes rewritten in one consistent format (stale PA/status language removed) + Oct 6 policy-date refreshes. All 82 searched payers re-checked/refreshed to 2026-10-07 (specific evidence noted where a document was read; others web-search level).
+- Local: 83 payers / 83 policies / 82 searched. Covered 13, PA Required - No Policy 17, Not Med Necessary 2, Investigational 34, Not Covered 17.
+- AWS bundle dry-run: restored AWS pg_dump into a scratch DB, ran bundle → active + searched tables IDENTICAL to local. Ready to deploy on dashboard approval.
+- Round 6 (Oct 7): BCBS Rhode Island prior auth → Yes (user decision); appended to AWS bundle.
+- Round 7 (Oct 7): BCBS Nebraska payer_type → "BCBS, Medicare Advantage". Undid overstated generic "Re-checked" notes/dates on ~60 searched rows (restored prior dates). No Policy cleanup 82 → 67: removed CMS DMEPOS Fee Schedule, Bright Health, Friday Health, UHC Louisiana Medicaid, First Health, Magellan, GuideWell/Florida Blue, Bind, LifeWise/Cambia; merged duplicates (BCBS TN ×2, BCBS SC ×2, Anthem Elevance → Anthem Multi-state, BCBS California → Anthem California, Centene ×2). Noridian JD moved to active (Covered, PA No). Backup table `searched_payers_backup_20261007`.
+- Round 8 (Oct 7): individual review of all 52 remaining No Policy payers. 19 confirmed no E0469 (dated 2026-10-07), 20 not verifiable (portal-only; date unchanged, note added), 10 Anthem/Elevance rows with open precert lead (GA notice indexed as adding E0469 eff 6/1/2025; current DME.00012 removed E0469, CG-DME-43 lacks it), 3 FOUND pending user decision: Sentara (DME 14, Commercial + VA Medicaid, eff 8/1/2026: HFCWO devices e.g. Volara & E0469 "NOT COVERED", pre-cert required), SelectHealth UT (commercial + Medicaid PA), Select Health CO (commercial + Medicare PA). Taro Health renamed "Mending (formerly Taro Health)". Also: Moda HFCWO MNC (eff 04/01/2026) lists E0469 under "CPT or HCPC codes covered" → suggest Moda = Covered, PA Yes.
+- Local now: 84 payers / 84 policies / 67 searched. AWS bundle dry-run re-verified identical.
+- Round 9 (Oct 7, local + bundle): Moda → Covered, PA Yes (source: Moda HFCWO MNC eff 04/01/2026, E0469 under codes covered). Added Select Health Utah (Medicaid), Select Health Utah (Traditional Integrated) and Select Health Colorado (commercial) — all Covered, PA Yes (Select Health code lists as of 09/23/26). Removed 'Select Health (Colorado)' from searched. 'SelectHealth (UT)' (commercial) still on No Policy list pending user decision. Local: 87 payers / 66 searched. State Medicaid FFS: NOT systematically checked (25 removed in May without verification) — 50-state sweep proposed.
+- Round 10 (Oct 7): added Select Health Utah (Commercial) Covered/PA Yes; added Sentara Health Plans Not Covered/PA Yes (DME 14 v9, pre-cert required); removed both from searched. Medicaid 50-state sweep started.
+- Medicaid FFS sweep (Oct 7): 51 jurisdictions. E0469 LISTED: IL (PA B), IN, VA, HI, MS, MT (PA Y), DC, VT (limit list); MO lists as Noncovered; already active CA/KY/MN; NOT listed: AK, CO, FL, ID, LA, MD, ND, NE, NV, NY, OK, SC, SD, TX, WA, WV; UNVERIFIABLE (portal/license/JS): AL, AR, AZ, CT, DE, GA, IA, KS, MA, ME, MI, NC, NH, NJ, NM, OH, OR, PA, RI, UT, WI, WY; TN managed care only. Review file E0469_Medicaid_State_Sweep_2026-10-07.xlsx. No DB changes yet. Phase 2 (Medicaid MCOs by state) not started.
+- Round 11 (Oct 7): Sentara PA → No. All 16 'PA Required - No Policy' rows → Covered (status removed from code; 4 statuses remain: Covered, Not Medically Necessary, Investigational, Not Covered). 37 state Medicaid FFS programs (15 not listed + 22 unverifiable) added to searched_payers as '<State> Medicaid (FFS)'. Local: 89 payers / 101 searched. AWS bundle dry-run identical. 9 state Medicaid additions (IL, IN, VA, HI, MS, MT, DC, VT, MO) still pending user approval.
+- Round 12 (Oct 7): added 9 state Medicaid FFS payers (IL, IN, VA, HI, MS, MT, DC, VT Covered; MO Not Covered). Phase 2 (Medicaid MCOs) started. AWS push only after user OK.
+- Phase 2 Medicaid MCO sweep (Oct 7): Centene 0057-F lists — E0469 PA on LA Healthcare Connections, Magnolia MS, Iowa Total Care, Meridian IL, Trillium OR, Superior TX, Sunshine FL, Sunflower KS, MHS IN, Home State MO, Nebraska Total Care, PA Health & Wellness, SilverSummit NV (13 Medicaid) + Wellcare AZ Complete Health Medicare; none on Coordinated Care WA, WellCare KY, Absolute Total Care SC Medicaid, WellCare NC, Ohana HI; Wellpoint TX none; Molina/ABH/CareSource/AmeriHealth not verifiable. Sheet 'Managed Care (Phase 2)' added to E0469_Medicaid_State_Sweep_2026-10-07.xlsx. Pending user approval.
+- Round 13 (Oct 7): added 14 managed care plans (13 Centene Medicaid + Wellcare AZ Medicare) as Covered/PA Yes after exact-code/section/page re-verification; Superior TX removed from searched; 11 MCO not-listed/unverifiable entries added/updated in searched. Local: 112 payers / 113 searched. AWS bundle dry-run identical. Data updates complete — awaiting user OK to deploy AWS.
+- **AWS DEPLOYED Oct 7, 2026 (user approved)**: server-side backup `~/e0469-dashboard/backup_e0469_predeploy_20261007.sql`; AWS data confirmed unchanged vs test copy; applied `aws_bundle_2026-10-07.sql` (single transaction); AWS data verified identical to local (both tables); copied dashboard.py, schema.sql, templates/dashboard.html, templates/map.html; `docker compose build --no-cache && up -d` — container healthy; verified auth (401 without creds), dashboard/map/export 200, 4 statuses, 112 payers / 113 searched. Branch `coverage-status-redesign` committed and pushed.

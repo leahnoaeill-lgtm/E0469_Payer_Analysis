@@ -128,18 +128,24 @@ DB_CONFIG = {
 }
 ```
 
-## Coverage Classification (CRITICAL)
+## Coverage Classification (CRITICAL) — redesigned Oct 7, 2026
 
-Use exact policy language. These terms have different meanings:
+Each policy row has ONE **Coverage Status** plus a separate **Prior Auth** field and an exact **Policy Wording** quote (`payer_policies.policy_wording`).
 
-| Term | Meaning | Appeal Potential |
-|------|---------|------------------|
-| **NOT COVERED** | Categorical exclusion from benefits | Low |
-| **Investigational/Experimental** | Insufficient evidence | Medium |
-| **Not Medically Necessary** | Does not meet criteria | Higher |
-| **Case Review - Prior Auth Needed** | Individual case determination | Higher |
+| Coverage Status | Use when | Appeal Potential |
+|---|---|---|
+| **Covered** | Policy covers E0469 with criteria, OR E0469 is on a PA list / fee schedule (listed = covered; criteria always apply). Medicare MACs = Covered, PA No. | — |
+| **Investigational** | Policy calls E0469 / OLE devices investigational, experimental or unproven (incl. UHC "unproven and not medically necessary", Aetna EIU). | Medium |
+| **Not Medically Necessary** | Payer lists E0469 as "not medically necessary" without an investigational basis (Kaiser WA non-Medicare, BCBS RI commercial). | Higher |
+| **Not Covered** | Policy explicitly says "not covered" / "non-covered" / "no covered indications" / "Noncovered". | Low |
 
-**Only use "NOT COVERED" when the policy explicitly says it.** Do not interpret "Investigational" as "NOT COVERED".
+**Prior Auth** values: `Yes` (only when a document explicitly requires PA for E0469, or by user decision), `No`, `Not Applicable` (policy says PA not applicable), `Not Stated`.
+
+Rules:
+- **Only use "Not Covered" when the policy explicitly says it.** Do not interpret "Investigational" as "Not Covered".
+- The former statuses "PA Required - No Policy" and "Case-by-Case - No Policy" were retired Oct 7, 2026 (folded into Covered).
+- Legacy columns `investigational` and `not_med_necessary` are still in the table but no longer shown; retire later.
+- Never stamp a searched payer as re-checked unless a document was actually read — record "NOT VERIFIABLE" otherwise.
 
 ## Payer Data Structure
 
@@ -198,15 +204,18 @@ lsof -ti:5002 | xargs kill -9
 "E0469" "investigational" OR "not covered" payer
 ```
 
-## Current Statistics (as of May 10, 2026 — end of session)
+## Current Statistics (as of Oct 7, 2026 — deployed)
 
-- **Total Payers with Explicit E0469 Policies**: 70 (local + AWS in sync)
-- **Searched Payers (No E0469 Found)**: 90 (all refreshed to 2026-05-10)
-- **Last Quarterly Re-Review**: May 10, 2026 (Session 3) — verified all 186 payers via WebSearch + PDF extraction
-- **Last Bulk Audit**: Feb 6, 2026 (Session 2) — source URL verification for all 70 payers
-- **CMS DMEPOS Master List update (Jan 13, 2026, eff Apr 13, 2026)**: E0469 added to Master List — eligible for future PA-Required status but NOT currently required by CMS
+- **Total Payers**: 112 (local + AWS in sync) — Covered 57, Investigational 34, Not Covered 19, Not Medically Necessary 2
+- **Prior Auth**: Yes 47, Not Stated 49, Not Applicable 12, No 4
+- **Searched Payers (No Policy)**: 113 — includes 37 state Medicaid FFS programs and Medicaid MCO sweep results
+- **Last Re-Review**: Oct 6–7, 2026 (Session 5) — full re-read of all sources, individual review of No Policy list, 50-state Medicaid FFS sweep, Centene Medicaid MCO sweep (CMS-0057-F PA lists). Review files: `E0469_Policy_Review_2026-10-06.xlsx`, `E0469_Coverage_Status_Remap_2026-10-07.xlsx`, `E0469_Medicaid_State_Sweep_2026-10-07.xlsx`
+- **Previous**: Aug 7, 2026 (Session 4), May 10, 2026 (Session 3), Feb 6, 2026 (Session 2)
+- **CMS DMEPOS Master List update (Jan 13, 2026, eff Apr 13, 2026)**: E0469 added to Master List — NOT on the Required PA List
+- **AWS backup before Oct 7 deploy**: `~/e0469-dashboard/backup_e0469_predeploy_20261007.sql`; DB tables `payer_policies_backup_20261007`, `searched_payers_backup_20261007`
+- **Warning**: `load_data.py` / `E0469_Explicit_Payer_Policies.py` use the OLD status model — running `load_data.py` would overwrite the database.
 
-### Coverage status distribution (May 10, 2026)
+### Coverage status distribution
 Run this query for current breakdown:
 ```bash
 /Applications/Postgres.app/Contents/Versions/latest/bin/psql -U postgres -d e0469_analysis \

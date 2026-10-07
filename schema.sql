@@ -56,10 +56,13 @@ CREATE INDEX idx_payers_type ON payers(payer_type);
 CREATE TABLE payer_policies (
     id SERIAL PRIMARY KEY,
     payer_id INTEGER NOT NULL REFERENCES payers(id) ON DELETE CASCADE,
+    -- Covered | Not Medically Necessary | Investigational | Not Covered
     coverage_status VARCHAR(100),
+    -- Yes (only when explicitly required) | No | Not Applicable | Not Stated
     prior_auth_required VARCHAR(100),
-    investigational VARCHAR(100),
-    not_med_necessary VARCHAR(100),
+    investigational VARCHAR(100),      -- legacy (pre-Oct 2026); superseded by coverage_status
+    not_med_necessary VARCHAR(100),    -- legacy (pre-Oct 2026); superseded by coverage_status
+    policy_wording TEXT,               -- exact quote of the payer's E0469 language
     policy_date VARCHAR(50),
     policy_number VARCHAR(255),
     notes TEXT,
